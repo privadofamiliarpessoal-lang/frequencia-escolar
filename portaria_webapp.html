@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>📚 Frequência Escolar – Portaria</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --verde: #2e7d32;
+    --verde-claro: #4caf50;
+    --azul: #1565c0;
+    --laranja: #e65100;
+    --cinza: #f5f5f5;
+    --branco: #ffffff;
+    --sombra: 0 4px 20px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(90deg, var(--verde) 0%, var(--azul) 100%);
+    color: white;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: var(--sombra);
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
+  header p { font-size: 0.82rem; opacity: 0.88; margin-top: 4px; }
+  .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+  /* Config panel */
+  .config-panel {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--sombra);
+  }
+  .config-panel h2 { font-size: 0.95rem; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  label { font-size: 0.82rem; color: #555; font-weight: 600; display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 0.9rem; margin-bottom: 10px; transition: border-color 0.2s;
+    background: #fafafa;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--azul); background: white; }
+
+  /* Scanner */
+  .scanner-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--sombra);
+  }
+  .scanner-card h2 { font-size: 0.95rem; color: var(--verde); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  #reader {
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    border: 3px solid var(--verde-claro);
+    background: #111;
+  }
+  #reader video { border-radius: 8px; }
+  .btn {
+    display: block; width: 100%; padding: 13px;
+    border: none; border-radius: 10px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.4px;
+  }
+  .btn-green { background: var(--verde-claro); color: white; }
+  .btn-green:hover { background: var(--verde); }
+  .btn-red { background: #ef5350; color: white; }
+  .btn-red:hover { background: #c62828; }
+  .btn-blue { background: var(--azul); color: white; }
+  .btn-blue:hover { background: #0d47a1; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* Manual input */
+  .manual-row { display: flex; gap: 8px; margin-top: 10px; }
+  .manual-row input { margin-bottom: 0; flex: 1; }
+  .manual-row button { white-space: nowrap; padding: 10px 16px; border-radius: 8px;
+    background: var(--azul); color: white; border: none; font-weight: 700; cursor: pointer; font-size: 0.88rem; }
+
+  /* Feedback */
+  .feedback {
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+    font-size: 0.92rem; font-weight: 600;
+    display: none; align-items: center; gap: 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+  .feedback.ok { background: #e8f5e9; border: 2px solid #a5d6a7; color: #1b5e20; display: flex; }
+  .feedback.err { background: #ffebee; border: 2px solid #ef9a9a; color: #b71c1c; display: flex; }
+  .feedback.dup { background: #fff8e1; border: 2px solid #ffe082; color: #e65100; display: flex; }
+  .feedback-icon { font-size: 1.5rem; }
+
+  /* Log */
+  .log-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: var(--sombra);
+    margin-bottom: 16px;
+  }
+  .log-card h2 { font-size: 0.95rem; color: #555; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .log-header-row {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+  .badge-count {
+    background: var(--verde-claro); color: white; border-radius: 20px;
+    padding: 3px 12px; font-size: 0.8rem; font-weight: 700;
+  }
+  .log-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 8px; margin-bottom: 6px;
+    background: #f9f9f9; border-left: 4px solid var(--verde-claro);
+    font-size: 0.84rem;
+  }
+  .log-item .log-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--verde-claro), var(--azul));
+    color: white;
+  }
+  .log-name { font-weight: 700; color: #333; }
+  .log-meta { color: #888; font-size: 0.78rem; }
+  .log-time { margin-left: auto; font-size: 0.82rem; color: var(--azul); font-weight: 600; }
+  .log-empty { text-align: center; color: #aaa; padding: 20px; font-size: 0.88rem; }
+
+  /* Export */
+  .export-row { display: flex; gap: 8px; margin-top: 10px; }
+  .export-row button { flex: 1; padding: 11px; border-radius: 9px; border: none;
+    font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-export-csv { background: #e3f2fd; color: var(--azul); }
+  .btn-export-csv:hover { background: var(--azul); color: white; }
+  .btn-clear { background: #ffebee; color: #c62828; }
+  .btn-clear:hover { background: #c62828; color: white; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-bottom: 16px;
+  }
+  .stat-box {
+    background: white; border-radius: 12px; padding: 12px 10px;
+    text-align: center; box-shadow: var(--sombra);
+  }
+  .stat-box .num { font-size: 1.6rem; font-weight: 800; }
+  .stat-box .lbl { font-size: 0.72rem; color: #888; margin-top: 2px; }
+  .stat-presentes .num { color: var(--verde); }
+  .stat-hoje .num { color: var(--azul); }
+  .stat-hora .num { color: var(--laranja); font-size: 1.1rem; }
+
+  footer { text-align: center; padding: 14px; font-size: 0.75rem; color: #999; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 Sistema de Frequência Escolar</h1>
+  <p>Leitura de QR Code – Portaria</p>
+</header>
+
+<div class="container">
+
+  <!-- Configuração -->
+  <div class="config-panel">
+    <h2>⚙️ Configuração</h2>
+    <label>URL do Google Apps Script (Web App)</label>
+    <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/SEU_ID/exec"
+           value="">
+    <label>Turno</label>
+    <select id="turno">
+      <option value="Manhã">🌅 Manhã</option>
+      <option value="Tarde">🌇 Tarde</option>
+      <option value="Noite">🌙 Noite</option>
+    </select>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-box stat-presentes">
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">Registros Hoje</div>
+    </div>
+    <div class="stat-box stat-hoje">
+      <div class="num" id="statData">--/--</div>
+      <div class="lbl">Data</div>
+    </div>
+    <div class="stat-box stat-hora">
+      <div class="num" id="statHora">00:00</div>
+      <div class="lbl">Hora Atual</div>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback" id="feedback">
+    <span class="feedback-icon" id="fbIcon">✅</span>
+    <div>
+      <div id="fbTitulo">OK</div>
+      <div id="fbDetalhe" style="font-size:0.82rem;font-weight:400;margin-top:2px;"></div>
+    </div>
+  </div>
+
+  <!-- Scanner -->
+  <div class="scanner-card">
+    <h2>📷 Leitor de QR Code</h2>
+    <div id="reader"></div>
+    <button class="btn btn-green" id="btnStart" onclick="startScanner()">▶ Iniciar Câmera</button>
+    <button class="btn btn-red" id="btnStop" onclick="stopScanner()" style="display:none;margin-top:8px;">⏹ Parar Câmera</button>
+
+    <div class="manual-row" style="margin-top:14px;">
+      <input type="text" id="manualId" placeholder="Ou digitar matrícula manualmente..." maxlength="20">
+      <button onclick="registrarManual()">✓ OK</button>
+    </div>
+  </div>
+
+  <!-- Log do dia -->
+  <div class="log-card">
+    <div class="log-header-row">
+      <h2>📋 Registros de Hoje</h2>
+      <span class="badge-count" id="badgeCount">0</span>
+    </div>
+    <div id="logList"><div class="log-empty">Nenhum registro ainda. Inicie a câmera e escaneie!</div></div>
+
+    <div class="export-row">
+      <button class="btn-export-csv" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      <button class="btn-clear" onclick="limparLog()">🗑 Limpar</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>Sistema de Frequência Escolar v1.0 · Desenvolvido para escolas públicas</footer>
+
+<script>
+// ───── Estado ─────
+let scanner = null;
+let isScanning = false;
+let lastScan = '';
+let lastScanTime = 0;
+const COOLDOWN_MS = 3000; // 3s entre scans do mesmo aluno
+
+// Banco local de alunos (preencher ou buscar via API)
+const alunosDB = {
+  "001": { nome: "Ana Carolina Silva",    turma: "9°A", status: "" },
+  "002": { nome: "Bruno Mendes Costa",    turma: "9°A", status: "" },
+  "003": { nome: "Carla Santos Lima",     turma: "8°B", status: "" },
+  "004": { nome: "Diego Ferreira Souza",  turma: "8°B", status: "" },
+  "005": { nome: "Eduarda Oliveira",      turma: "7°C", status: "" },
+  "006": { nome: "Felipe Nunes Borges",   turma: "7°C", status: "" },
+  "007": { nome: "Gabriela Rocha Pinto",  turma: "6°A", status: "" },
+  "008": { nome: "Henrique Costa Melo",   turma: "6°A", status: "" },
+};
+
+let registrosHoje = JSON.parse(localStorage.getItem('registrosHoje') || '[]');
+// Limpar se for novo dia
+const hoje = new Date().toLocaleDateString('pt-BR');
+if (registrosHoje.length > 0 && registrosHoje[0].data !== hoje) {
+  registrosHoje = [];
+}
+
+// ───── Relógio ─────
+function atualizarRelogio() {
+  const agora = new Date();
+  document.getElementById('statHora').textContent =
+    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('statData').textContent =
+    agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ───── Scanner ─────
+function startScanner() {
+  if (isScanning) return;
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display = 'block';
+
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    onScanSuccess,
+    () => {}
+  ).then(() => { isScanning = true; })
+   .catch(err => {
+     showFeedback('err', '⚠️ Câmera não disponível', 'Verifique as permissões do navegador.');
+     document.getElementById('btnStart').style.display = 'block';
+     document.getElementById('btnStop').style.display = 'none';
+   });
+}
+
+function stopScanner() {
+  if (scanner && isScanning) {
+    scanner.stop().then(() => {
+      isScanning = false;
+      document.getElementById('btnStart').style.display = 'block';
+      document.getElementById('btnStop').style.display = 'none';
+    });
+  }
+}
+
+function onScanSuccess(decodedText) {
+  const agora = Date.now();
+  if (decodedText === lastScan && agora - lastScanTime < COOLDOWN_MS) return;
+  lastScan = decodedText;
+  lastScanTime = agora;
+  processarMatricula(decodedText.trim());
+}
+
+function registrarManual() {
+  const val = document.getElementById('manualId').value.trim();
+  if (!val) return;
+  processarMatricula(val);
+  document.getElementById('manualId').value = '';
+}
+
+// ───── Processamento ─────
+function processarMatricula(matricula) {
+  const agora = new Date();
+  const hora  = agora.toLocaleTimeString('pt-BR');
+  const data  = agora.toLocaleDateString('pt-BR');
+  const turno = document.getElementById('turno').value;
+
+  // Verificar duplicata no dia
+  const jaRegistrado = registrosHoje.find(r => r.matricula === matricula);
+  if (jaRegistrado) {
+    showFeedback('dup', '⚠️ Já registrado hoje!',
+      `${jaRegistrado.nome || matricula} · Entrada: ${jaRegistrado.hora}`);
+    vibrar([100, 50, 100]);
+    return;
+  }
+
+  const aluno = alunosDB[matricula];
+  const nome  = aluno ? aluno.nome : `Matrícula ${matricula}`;
+  const turma = aluno ? aluno.turma : '—';
+
+  const registro = { matricula, nome, turma, data, hora, turno, status: 'Presente' };
+  registrosHoje.unshift(registro);
+  salvarLocal();
+  renderizarLog();
+  atualizarStats();
+
+  showFeedback('ok', `✅ ${nome}`, `Turma ${turma} · ${hora} · ${turno}`);
+  vibrar([200]);
+
+  // Enviar para Google Sheets
+  enviarParaSheets(registro);
+}
+
+// ───── Feedback visual ─────
+function showFeedback(tipo, titulo, detalhe) {
+  const el = document.getElementById('feedback');
+  el.className = `feedback ${tipo}`;
+  document.getElementById('fbTitulo').textContent = titulo;
+  document.getElementById('fbDetalhe').textContent = detalhe;
+
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = 'feedback'; }, 4000);
+}
+
+function vibrar(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ───── Log ─────
+function renderizarLog() {
+  const container = document.getElementById('logList');
+  if (registrosHoje.length === 0) {
+    container.innerHTML = '<div class="log-empty">Nenhum registro ainda.</div>';
+    return;
+  }
+  container.innerHTML = registrosHoje.slice(0, 30).map(r => {
+    const ini = r.nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+    return `<div class="log-item">
+      <div class="log-avatar">${ini}</div>
+      <div>
+        <div class="log-name">${r.nome}</div>
+        <div class="log-meta">Turma ${r.turma} · Matrícula ${r.matricula}</div>
+      </div>
+      <div class="log-time">${r.hora}</div>
+    </div>`;
+  }).join('');
+}
+
+function atualizarStats() {
+  document.getElementById('statTotal').textContent = registrosHoje.length;
+  document.getElementById('badgeCount').textContent = registrosHoje.length;
+}
+
+function limparLog() {
+  if (!confirm('Apagar todos os registros locais de hoje?')) return;
+  registrosHoje = [];
+  salvarLocal();
+  renderizarLog();
+  atualizarStats();
+}
+
+// ───── Storage ─────
+function salvarLocal() {
+  localStorage.setItem('registrosHoje', JSON.stringify(registrosHoje));
+}
+
+// ───── Exportar CSV ─────
+function exportarCSV() {
+  if (registrosHoje.length === 0) { alert('Nenhum registro para exportar.'); return; }
+  const header = 'Matrícula,Nome,Turma,Data,Hora,Turno,Status\n';
+  const rows = registrosHoje.map(r =>
+    `"${r.matricula}","${r.nome}","${r.turma}","${r.data}","${r.hora}","${r.turno}","${r.status}"`
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `frequencia_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+}
+
+// ───── Google Sheets via Apps Script ─────
+async function enviarParaSheets(registro) {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url || !url.startsWith('https://script.google.com')) return;
+
+  try {
+    const params = new URLSearchParams({
+      action: 'registrarPresenca',
+      matricula: registro.matricula,
+      nome: registro.nome,
+      turma: registro.turma,
+      data: registro.data,
+      hora: registro.hora,
+      turno: registro.turno,
+      status: registro.status
+    });
+    await fetch(`${url}?${params}`, { method: 'GET', mode: 'no-cors' });
+  } catch (e) {
+    console.warn('Falha ao enviar para Sheets (modo offline):', e);
+  }
+}
+
+// ───── Init ─────
+renderizarLog();
+atualizarStats();
+
+// Tecla Enter no campo manual
+document.getElementById('manualId').addEventListener('keydown', e => {
+  if (e.key === 'Enter') registrarManual();
+});
+</script>
+</body>
+</html>
