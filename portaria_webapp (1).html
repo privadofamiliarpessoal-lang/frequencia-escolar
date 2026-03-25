@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>📚 Frequência Escolar – Portaria</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --verde: #2e7d32;
+    --verde-claro: #4caf50;
+    --azul: #1565c0;
+    --laranja: #e65100;
+    --cinza: #f5f5f5;
+    --branco: #ffffff;
+    --sombra: 0 4px 20px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(90deg, var(--verde) 0%, var(--azul) 100%);
+    color: white;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: var(--sombra);
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
+  header p { font-size: 0.82rem; opacity: 0.88; margin-top: 4px; }
+  .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+  /* Config panel */
+  .config-panel {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--sombra);
+  }
+  .config-panel h2 { font-size: 0.95rem; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  label { font-size: 0.82rem; color: #555; font-weight: 600; display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 0.9rem; margin-bottom: 10px; transition: border-color 0.2s;
+    background: #fafafa;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--azul); background: white; }
+
+  /* Scanner */
+  .scanner-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--sombra);
+  }
+  .scanner-card h2 { font-size: 0.95rem; color: var(--verde); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  #reader {
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    border: 3px solid var(--verde-claro);
+    background: #111;
+  }
+  #reader video { border-radius: 8px; }
+  .btn {
+    display: block; width: 100%; padding: 13px;
+    border: none; border-radius: 10px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.4px;
+  }
+  .btn-green { background: var(--verde-claro); color: white; }
+  .btn-green:hover { background: var(--verde); }
+  .btn-red { background: #ef5350; color: white; }
+  .btn-red:hover { background: #c62828; }
+  .btn-blue { background: var(--azul); color: white; }
+  .btn-blue:hover { background: #0d47a1; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* Manual input */
+  .manual-row { display: flex; gap: 8px; margin-top: 10px; }
+  .manual-row input { margin-bottom: 0; flex: 1; }
+  .manual-row button { white-space: nowrap; padding: 10px 16px; border-radius: 8px;
+    background: var(--azul); color: white; border: none; font-weight: 700; cursor: pointer; font-size: 0.88rem; }
+
+  /* Feedback */
+  .feedback {
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+    font-size: 0.92rem; font-weight: 600;
+    display: none; align-items: center; gap: 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+  .feedback.ok { background: #e8f5e9; border: 2px solid #a5d6a7; color: #1b5e20; display: flex; }
+  .feedback.err { background: #ffebee; border: 2px solid #ef9a9a; color: #b71c1c; display: flex; }
+  .feedback.dup { background: #fff8e1; border: 2px solid #ffe082; color: #e65100; display: flex; }
+  .feedback-icon { font-size: 1.5rem; }
+
+  /* Log */
+  .log-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: var(--sombra);
+    margin-bottom: 16px;
+  }
+  .log-card h2 { font-size: 0.95rem; color: #555; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .log-header-row {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+  .badge-count {
+    background: var(--verde-claro); color: white; border-radius: 20px;
+    padding: 3px 12px; font-size: 0.8rem; font-weight: 700;
+  }
+  .log-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 8px; margin-bottom: 6px;
+    background: #f9f9f9; border-left: 4px solid var(--verde-claro);
+    font-size: 0.84rem;
+  }
+  .log-item .log-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--verde-claro), var(--azul));
+    color: white;
+  }
+  .log-name { font-weight: 700; color: #333; }
+  .log-meta { color: #888; font-size: 0.78rem; }
+  .log-time { margin-left: auto; font-size: 0.82rem; color: var(--azul); font-weight: 600; }
+  .log-empty { text-align: center; color: #aaa; padding: 20px; font-size: 0.88rem; }
+
+  /* Export */
+  .export-row { display: flex; gap: 8px; margin-top: 10px; }
+  .export-row button { flex: 1; padding: 11px; border-radius: 9px; border: none;
+    font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-export-csv { background: #e3f2fd; color: var(--azul); }
+  .btn-export-csv:hover { background: var(--azul); color: white; }
+  .btn-clear { background: #ffebee; color: #c62828; }
+  .btn-clear:hover { background: #c62828; color: white; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-bottom: 16px;
+  }
+  .stat-box {
+    background: white; border-radius: 12px; padding: 12px 10px;
+    text-align: center; box-shadow: var(--sombra);
+  }
+  .stat-box .num { font-size: 1.6rem; font-weight: 800; }
+  .stat-box .lbl { font-size: 0.72rem; color: #888; margin-top: 2px; }
+  .stat-presentes .num { color: var(--verde); }
+  .stat-hoje .num { color: var(--azul); }
+  .stat-hora .num { color: var(--laranja); font-size: 1.1rem; }
+
+  footer { text-align: center; padding: 14px; font-size: 0.75rem; color: #999; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 Sistema de Frequência Escolar</h1>
+  <p>E. M. E. B. Mônica Rosa de Jesus</p>
+</header>
+
+<div class="container">
+
+  <!-- Configuração -->
+  <div class="config-panel">
+    <h2>⚙️ Configuração</h2>
+    <label>URL do Google Apps Script (Web App)</label>
+    <input type="url" id="scriptUrl" readonly style="background:#f0f4f8;color:#888;font-size:0.78rem;cursor:default;" placeholder="https://script.google.com/macros/s/SEU_ID/exec"
+           value="https://script.google.com/macros/s/AKfycbyEH1eJniJGliX33uXvnASIXwci7Gsv0j4HhZE4JSWKQjsuh_5sXwCanX_Jzcz_J5WikQ/exec">
+    <label>Turno</label>
+    <select id="turno">
+      <option value="Manhã">🌅 Manhã</option>
+      <option value="Tarde">🌇 Tarde</option>
+      <option value="Noite">🌙 Noite</option>
+    </select>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-box stat-presentes">
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">Registros Hoje</div>
+    </div>
+    <div class="stat-box stat-hoje">
+      <div class="num" id="statData">--/--</div>
+      <div class="lbl">Data</div>
+    </div>
+    <div class="stat-box stat-hora">
+      <div class="num" id="statHora">00:00</div>
+      <div class="lbl">Hora Atual</div>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback" id="feedback">
+    <span class="feedback-icon" id="fbIcon">✅</span>
+    <div>
+      <div id="fbTitulo">OK</div>
+      <div id="fbDetalhe" style="font-size:0.82rem;font-weight:400;margin-top:2px;"></div>
+    </div>
+  </div>
+
+  <!-- Scanner -->
+  <div class="scanner-card">
+    <h2>📷 Leitor de QR Code</h2>
+    <div id="reader"></div>
+    <button class="btn btn-green" id="btnStart" onclick="startScanner()">▶ Iniciar Câmera</button>
+    <button class="btn btn-red" id="btnStop" onclick="stopScanner()" style="display:none;margin-top:8px;">⏹ Parar Câmera</button>
+
+    <div class="manual-row" style="margin-top:14px;">
+      <input type="text" id="manualId" placeholder="Ou digitar matrícula manualmente..." maxlength="20">
+      <button onclick="registrarManual()">✓ OK</button>
+    </div>
+  </div>
+
+  <!-- Log do dia -->
+  <div class="log-card">
+    <div class="log-header-row">
+      <h2>📋 Registros de Hoje</h2>
+      <span class="badge-count" id="badgeCount">0</span>
+    </div>
+    <div id="logList"><div class="log-empty">Nenhum registro ainda. Inicie a câmera e escaneie!</div></div>
+
+    <div class="export-row">
+      <button class="btn-export-csv" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      <button class="btn-clear" onclick="limparLog()">🗑 Limpar</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>Sistema de Frequência Escolar v1.0 · Desenvolvido para escolas públicas</footer>
+
+<script>
+// ───── Estado ─────
+let scanner = null;
+let isScanning = false;
+let lastScan = '';
+let lastScanTime = 0;
+const COOLDOWN_MS = 3000; // 3s entre scans do mesmo aluno
+
+// Banco local de alunos (preencher ou buscar via API)
+const alunosDB = {
+  "202630000093": { nome: "Allexsandro Barros Dos Santos", turma: "PRÉ I A (Manhã)" },
+  "202530004189": { nome: "Amélany Leticia Alves Cassiano", turma: "PRÉ I A (Manhã)" },
+  "202530004222": { nome: "Ana Clara Silva Santos", turma: "PRÉ I A (Manhã)" },
+  "202630000084": { nome: "Aylanne Eloá Da Silva Santos", turma: "PRÉ I A (Manhã)" },
+  "202630000173": { nome: "Aylla Isabely Da Silva Lyra", turma: "PRÉ II A (Manhã)" },
+  "202430005826": { nome: "Cecilia Eloá Silva Santos", turma: "PRÉ II A (Manhã)" },
+  "202330028962": { nome: "Ellysa Emanuelli Dos Santos", turma: "PRÉ II A (Manhã)" },
+  "202530004572": { nome: "Emannuelly Maria Balbino Batista Dos Santos", turma: "PRÉ I A (Manhã)" },
+  "202530000617": { nome: "Evellin Da Silva", turma: "PRÉ II A (Manhã)" },
+  "202630001608": { nome: "Fernando Gabriel Santos Da Silva", turma: "PRÉ II A (Manhã)" },
+  "202630000066": { nome: "Geyse Araújo Dos Santos", turma: "PRÉ I A (Manhã)" },
+  "202330031888": { nome: "Isabelly Vitória Dos Santos", turma: "PRÉ II A (Manhã)" },
+  "202530004269": { nome: "Loize Manuelle De Souza Lima", turma: "PRÉ II A (Manhã)" },
+  "202330028990": { nome: "Lázaro Henrique Dos Santos Silva", turma: "PRÉ II A (Manhã)" },
+  "202430004669": { nome: "Maria Alice De Souza", turma: "PRÉ II A (Manhã)" },
+  "202630000235": { nome: "Maria Eloá Dos Santos Silva", turma: "PRÉ II A (Manhã)" },
+  "202630004270": { nome: "Maria Hellena Souza Costa", turma: "(PRÉ-ESCOLA I E II) A (Manhã)" },
+  "202330033096": { nome: "Maria Kauanny Silva Santos", turma: "(PRÉ-ESCOLA I E II) A (Manhã)" },
+  "202630000100": { nome: "Maria Sophia Dos Santos Silva", turma: "PRÉ I A (Manhã)" },
+  "202630000075": { nome: "Ryan Dos Santos Holanda", turma: "PRÉ I A (Manhã)" },
+  "202430008087": { nome: "Vitória Sophia Santos Da Silva", turma: "PRÉ I A (Manhã)" },
+  "202430008908": { nome: "Yahdson José De Lima Silva", turma: "PRÉ II A (Manhã)" },
+  "202530003744": { nome: "Ântony Gabriel Da Silva Costa", turma: "PRÉ II A (Manhã)" },
+  "202430006411": { nome: "Altamir Lorenzo Dos Santos", turma: "1º Ano A (Manhã)" },
+  "202630004299": { nome: "Carlos Henrique Souza Costa", turma: "1º Ano A (Manhã)" },
+  "202330035288": { nome: "Cristiany Nauany Guimarães De Oliveira", turma: "1º Ano A (Manhã)" },
+  "202430006430": { nome: "Davy Gabryel Bispo", turma: "1º Ano A (Manhã)" },
+  "202530000930": { nome: "Emília Melina Dos Santos Pereira", turma: "1º Ano A (Manhã)" },
+  "202330049407": { nome: "Ethan Levi De França Paixão Ribeiro", turma: "1º Ano A (Manhã)" },
+  "202330034164": { nome: "Giovanna Da Silva Santos", turma: "1º Ano A (Manhã)" },
+  "202330035377": { nome: "Guilherme Henrique Da Silva", turma: "1º Ano A (Manhã)" },
+  "202330039385": { nome: "José Davi Da Silva Santos", turma: "1º Ano A (Manhã)" },
+  "202430002753": { nome: "João Lucas Santos Pereira", turma: "1º Ano A (Manhã)" },
+  "202430000140": { nome: "Kauan Fernandes Dos Santos", turma: "1º Ano A (Manhã)" },
+  "202330047888": { nome: "Kemylly Ruany Souza Dias", turma: "1º Ano A (Manhã)" },
+  "202330035241": { nome: "Kethelly Maria Ferreira Severo", turma: "1º Ano A (Manhã)" },
+  "202530000967": { nome: "Laura Nunes Nascimento", turma: "1º Ano A (Manhã)" },
+  "202430000427": { nome: "Lucas Gabriel Da Silva Lopes", turma: "1º Ano A (Manhã)" },
+  "202330040009": { nome: "Manuelly Vitória Da Silva Santos", turma: "1º Ano A (Manhã)" },
+  "202330048811": { nome: "Maria Cecília Da Silva Dos Santos", turma: "1º Ano A (Manhã)" },
+  "202430000122": { nome: "Maria Cecília Dos Santos Silva", turma: "1º Ano A (Manhã)" },
+  "202530007289": { nome: "Maria Cecília Feitosa Dos Santos", turma: "1º Ano A (Manhã)" },
+  "202330034718": { nome: "Maria Helloysa Dos Santos Lopes", turma: "1º Ano A (Manhã)" },
+  "202330045041": { nome: "Rillary Ysabelly Ingrid Dos Santos Silva", turma: "1º Ano A (Manhã)" },
+  "202330034404": { nome: "Samara Emilly Da Silva Ferreira", turma: "1º Ano A (Manhã)" },
+  "202430006556": { nome: "Waylon Pietro Santos Da Silva", turma: "1º Ano A (Manhã)" },
+  "202330039895": { nome: "Ícaro Ian Dos Santos", turma: "1º Ano A (Manhã)" },
+  "202430007740": { nome: "Amanda Da Conceição Da Silva", turma: "1º Ano B (Manhã)" },
+  "202330034217": { nome: "Americo Henrique Santos", turma: "1º Ano B (Manhã)" },
+  "202330034530": { nome: "Ayla De Jesus Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202330052940": { nome: "Brenda Yorranna Oliveira Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202330035330": { nome: "Cleverton Araújo Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202430009404": { nome: "Davi Harrison Oliveira Bosquetti", turma: "1º Ano B (Manhã)" },
+  "202330047055": { nome: "Enzo Francisco Lima Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202430006734": { nome: "Enzo Leon Da Silva", turma: "1º Ano B (Manhã)" },
+  "202430000347": { nome: "Esmeralda Grazielly Couto Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202530000976": { nome: "Gabriela Da Silva Ferreira", turma: "1º Ano B (Manhã)" },
+  "202530005284": { nome: "Higor Gabriel Nunes Da Silva", turma: "1º Ano B (Manhã)" },
+  "202430000445": { nome: "Isis Beatriz Dos Santos Silva", turma: "1º Ano B (Manhã)" },
+  "202330052529": { nome: "Joana Carolaine De Lima", turma: "1º Ano B (Manhã)" },
+  "202330034496": { nome: "Jonatas Miguel Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202330034155": { nome: "João Benjamin Silva Santos", turma: "1º Ano B (Manhã)" },
+  "202430006618": { nome: "Kayke Miguel França Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202330034075": { nome: "Maria Bethina Silva Fernandes", turma: "1º Ano B (Manhã)" },
+  "202330052538": { nome: "Maria Valentina Dos Santos", turma: "1º Ano B (Manhã)" },
+  "202430009342": { nome: "Théo Costa Bezerra", turma: "1º Ano B (Manhã)" },
+  "202330038486": { nome: "Vinícius Dos Santos Silva", turma: "1º Ano B (Manhã)" },
+  "202330038495": { nome: "Wesllys Levin Dos Santos Costa", turma: "1º Ano B (Manhã)" },
+  "202330043806": { nome: "Ana Lívia Monalisa Dos Santos Silva", turma: "2º Ano A (Manhã)" },
+  "202330000504": { nome: "Anthony Zaquiel Oliveira Fernandes", turma: "2º Ano A (Manhã)" },
+  "202330000569": { nome: "Cecília Elice Da Silva Lima", turma: "2º Ano A (Manhã)" },
+  "202430001738": { nome: "Cecília Esther Dos Santos Silva", turma: "2º Ano A (Manhã)" },
+  "202330043851": { nome: "David Luís Fernando Dos Santos Costa", turma: "2º Ano A (Manhã)" },
+  "202330055754": { nome: "Emilly Karla Fernandes Santos", turma: "2º Ano A (Manhã)" },
+  "202330001744": { nome: "Evelyn Vitória Dos Santos", turma: "2º Ano A (Manhã)" },
+  "202530005936": { nome: "Genivaldo Dos Santos Filho", turma: "2º Ano A (Manhã)" },
+  "202330043575": { nome: "Israel Shaylon Silva Santana", turma: "2º Ano A (Manhã)" },
+  "202630003040": { nome: "Italo Ray Santos Da Silva", turma: "2º Ano A (Manhã)" },
+  "202330001790": { nome: "João Miguel Alves Cassiano", turma: "2º Ano A (Manhã)" },
+  "202330043790": { nome: "João Miguel Dos Santos Bezerra", turma: "2º Ano A (Manhã)" },
+  "202330001922": { nome: "Keylla Maria Dos Santos", turma: "2º Ano A (Manhã)" },
+  "202330002017": { nome: "Lara Beatriz Souza Fernandes", turma: "2º Ano A (Manhã)" },
+  "202330043815": { nome: "Lara Isabelly Dos Santos Silva", turma: "2º Ano A (Manhã)" },
+  "202330002062": { nome: "Lucas Rafael De Melo Almeida", turma: "2º Ano A (Manhã)" },
+  "202330002170": { nome: "Manoela De Jesus Souza", turma: "2º Ano A (Manhã)" },
+  "202530005927": { nome: "Maria Lara Da Silva Araujo", turma: "2º Ano A (Manhã)" },
+  "202430006574": { nome: "Maria Vitória Da Conceição Lima", turma: "2º Ano A (Manhã)" },
+  "202630000280": { nome: "Nikólaos Silva Panos", turma: "2º Ano A (Manhã)" },
+  "202330043870": { nome: "Ágatha Sophya Silva Gomes", turma: "2º Ano A (Manhã)" },
+  "202330043619": { nome: "Adryan Beyjamym Alves Dos Santos", turma: "2º Ano B (Manhã)" },
+  "202330044750": { nome: "Alicya Valentina Da Silva", turma: "2º Ano B (Manhã)" },
+  "202330000451": { nome: "Anthonny Vinnicius Da Silva Santos", turma: "2º Ano B (Manhã)" },
+  "202330044886": { nome: "Anthony Benjamin Cardoso Da Conceição", turma: "2º Ano B (Manhã)" },
+  "202330000667": { nome: "Davyd Fabricio Dos Santos Silva", turma: "2º Ano B (Manhã)" },
+  "202330001225": { nome: "Deyvison Gabriel Da Silva", turma: "2º Ano B (Manhã)" },
+  "202430002557": { nome: "Eduardo Dos Santos Pontes", turma: "2º Ano B (Manhã)" },
+  "202330043950": { nome: "Emanuelly Carla Dos Santos Silva", turma: "2º Ano B (Manhã)" },
+  "202330002895": { nome: "Enzo Gabriel Dos Santos", turma: "2º Ano B (Manhã)" },
+  "202330043655": { nome: "John Santos Fernandes", turma: "2º Ano B (Manhã)" },
+  "202330032820": { nome: "José Wivisson Dos Santos Soares", turma: "2º Ano B (Manhã)" },
+  "202330042110": { nome: "João Lucas Santos Da Silva", turma: "2º Ano B (Manhã)" },
+  "202330043842": { nome: "João Pedro Araújo Da Silva", turma: "2º Ano B (Manhã)" },
+  "202630004029": { nome: "Lara Valenthyna Batista Dos Santos", turma: "2º Ano B (Manhã)" },
+  "202330041982": { nome: "Levy Miguel Do Carmo Silva", turma: "2º Ano B (Manhã)" },
+  "202330047467": { nome: "Matheus Henrique Da Silva Araujo", turma: "2º Ano B (Manhã)" },
+  "202330043904": { nome: "Mizael Dos Santos Silva", turma: "2º Ano B (Manhã)" },
+  "202530003145": { nome: "Sarah Silva Santos", turma: "2º Ano B (Manhã)" },
+  "202330032080": { nome: "Vitor Gabriel Alves Santos", turma: "2º Ano B (Manhã)" },
+  "202330003168": { nome: "Angelo Gabriel Olímpio De Souza", turma: "3º Ano A (Manhã)" },
+  "202330045201": { nome: "Davi Gustavo Soares Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202630003630": { nome: "David Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202330003284": { nome: "Enzo Gabriel De Lima Silva", turma: "3º Ano A (Manhã)" },
+  "202330003720": { nome: "José Ariel De Oliveira Silva", turma: "3º Ano A (Manhã)" },
+  "202330039975": { nome: "João Guilherme Santos Silva", turma: "3º Ano A (Manhã)" },
+  "202330006571": { nome: "João Lucas Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202430006609": { nome: "Kayo Gabriel França Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202330045408": { nome: "Kemily Vitória Da Silva Eugênio", turma: "3º Ano A (Manhã)" },
+  "202330004002": { nome: "Laurah Melinda Ferreira De Melo", turma: "3º Ano A (Manhã)" },
+  "202330047716": { nome: "Leandro Ruan Santos Da Conceição", turma: "3º Ano A (Manhã)" },
+  "202330004058": { nome: "Louise Gabrielly Soares Do Nascimento", turma: "3º Ano A (Manhã)" },
+  "202330055772": { nome: "Lucas Ezequiel Bispo Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202430002109": { nome: "Lázaro Heitor Alexandre Farias", turma: "3º Ano A (Manhã)" },
+  "202330004263": { nome: "Manuelly Maysa Da Silva Pereira", turma: "3º Ano A (Manhã)" },
+  "202330046245": { nome: "Maria Eduarda Ferreira Da Silva", turma: "3º Ano A (Manhã)" },
+  "202330004620": { nome: "Maria Isabelly Santos Do Nascimento", turma: "3º Ano A (Manhã)" },
+  "202330003103": { nome: "Maria Laura Dos Santos Silva", turma: "3º Ano A (Manhã)" },
+  "202330055057": { nome: "Maynara Martins Silva", turma: "3º Ano A (Manhã)" },
+  "202330003023": { nome: "Sofia Emanuelly Da Silva Santos", turma: "3º Ano A (Manhã)" },
+  "202430007375": { nome: "Thaynara Beatriz Da Silva", turma: "3º Ano A (Manhã)" },
+  "202430009683": { nome: "Whanny Ferro Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202330040528": { nome: "Yuri Pietro Monteiro Dos Santos", turma: "3º Ano A (Manhã)" },
+  "202330045257": { nome: "Adilson Júlio Santos Da Silva", turma: "3º Ano B (Manhã)" },
+  "202330046441": { nome: "Alexia Gabrielly Santos Pereira", turma: "3º Ano B (Manhã)" },
+  "202330003954": { nome: "Amanda Sophia Fernandes Da Silva Santos", turma: "3º Ano B (Manhã)" },
+  "202330043109": { nome: "Ana Sofhia Santos Lima", turma: "3º Ano B (Manhã)" },
+  "202330046370": { nome: "Arielle Dayanne Da Silva", turma: "3º Ano B (Manhã)" },
+  "202330004085": { nome: "Carlos Daniel Dos Santos", turma: "3º Ano B (Manhã)" },
+  "202330045239": { nome: "Carlos Eduardo Dos Santos Silva", turma: "3º Ano B (Manhã)" },
+  "202330004334": { nome: "Davi Lucas Manoel Da Silva", turma: "3º Ano B (Manhã)" },
+  "202330045720": { nome: "Davi Luiz De Oliveira", turma: "3º Ano B (Manhã)" },
+  "202330005716": { nome: "Eduarda Isadora De Souza Lima", turma: "3º Ano B (Manhã)" },
+  "202330004675": { nome: "Emilly Mayane De Oliveira Santos", turma: "3º Ano B (Manhã)" },
+  "202330004728": { nome: "Joaquim Miguel Ferreira Santos", turma: "3º Ano B (Manhã)" },
+  "202330046399": { nome: "José Anthony Gabriel Santos Silva", turma: "3º Ano B (Manhã)" },
+  "202330046325": { nome: "José Arthur Ariel Santos Silva", turma: "3º Ano B (Manhã)" },
+  "202330004764": { nome: "Lael Dos Santos Almeida", turma: "3º Ano B (Manhã)" },
+  "202330004817": { nome: "Layz Ferreira Santos", turma: "3º Ano B (Manhã)" },
+  "202330037569": { nome: "Lorena França Soares", turma: "3º Ano B (Manhã)" },
+  "202330004460": { nome: "Maria Aparecida Dos Santos", turma: "3º Ano B (Manhã)" },
+  "202330005171": { nome: "Maria Cecilia Dos Santos Silva", turma: "3º Ano B (Manhã)" },
+  "202530003593": { nome: "Maria Crislaine Lima Dos Santos", turma: "3º Ano B (Manhã)" },
+  "202330005233": { nome: "Maria Eduarda Fernandes Dos Santos", turma: "3º Ano B (Manhã)" },
+  "202430008864": { nome: "Mariele Sophia Dos Santos Silva", turma: "3º Ano B (Manhã)" },
+  "202330005331": { nome: "Nicolas Da Silva Santos", turma: "3º Ano B (Manhã)" },
+  "202330005369": { nome: "Sarah Valentina De Souza Lima", turma: "3º Ano B (Manhã)" },
+  "202330045426": { nome: "Ana Luiza Silva Santos", turma: "3º Ano C (Manhã)" },
+  "202330047903": { nome: "Ariane Mayla Santos", turma: "3º Ano C (Manhã)" },
+  "202330047912": { nome: "Breno Wenderson Oliveira Dos Santos", turma: "3º Ano C (Manhã)" },
+  "202330045749": { nome: "Carlos Henryque De Oliveira Souza", turma: "3º Ano C (Manhã)" },
+  "202430002127": { nome: "Elysa Ferreira Da Silva", turma: "3º Ano C (Manhã)" },
+  "202330045275": { nome: "José Kauã Da Silva Santos", turma: "3º Ano C (Manhã)" },
+  "202330046414": { nome: "José Rodolfo Santiago Dos Santos", turma: "3º Ano C (Manhã)" },
+  "202330047734": { nome: "João Manoel Olimpio Da Silva", turma: "3º Ano C (Manhã)" },
+  "202330003613": { nome: "João Miguel Da Silva", turma: "3º Ano C (Manhã)" },
+  "202430003456": { nome: "João Miguel Dos Santos Albuquerque", turma: "3º Ano C (Manhã)" },
+  "202530001857": { nome: "Luanderson Benicio Alves Carvalho", turma: "3º Ano C (Manhã)" },
+  "202330040161": { nome: "Luiz Miguel Apolinário Calado Barbosa", turma: "3º Ano C (Manhã)" },
+  "202430002118": { nome: "Maria Eloá Ferreira Da Silva", turma: "3º Ano C (Manhã)" },
+  "202330045444": { nome: "Morgana Cristina Dos Santos Araújo", turma: "3º Ano C (Manhã)" },
+  "202330045195": { nome: "Nicolas Joaquim De Oliveira Silva", turma: "3º Ano C (Manhã)" },
+  "202430001818": { nome: "Othavio Gabriel Pereira De Jesus", turma: "3º Ano C (Manhã)" },
+  "202530005892": { nome: "Paulo Emanoel Santos", turma: "3º Ano C (Manhã)" },
+  "202330046460": { nome: "Raissa Vitória Guimarães", turma: "3º Ano C (Manhã)" },
+  "202330046497": { nome: "Ronildo Luiz Silva", turma: "3º Ano C (Manhã)" },
+  "202330046540": { nome: "Sofia Silva Dos Santos", turma: "3º Ano C (Manhã)" },
+  "202530007609": { nome: "Yasmin Stanoga Moreira", turma: "3º Ano C (Manhã)" },
+  "202330045711": { nome: "Ytalo Dos Santos Oliveira", turma: "3º Ano C (Manhã)" },
+  "202330005064": { nome: "Anni Gabriella Dos Santos Fernandes", turma: "4º Ano A (Integral)" },
+  "202330005402": { nome: "Crisllane Batista Dos Santos", turma: "4º Ano A (Integral)" },
+  "202330005592": { nome: "Elisa Rafaely Dos Santos Silva", turma: "4º Ano A (Integral)" },
+  "202330005654": { nome: "Emilly Jacielly Dos Santos Fernandes", turma: "4º Ano A (Integral)" },
+  "202330005734": { nome: "Esmeralda Aparecida Da Silva Santos", turma: "4º Ano A (Integral)" },
+  "202330006660": { nome: "Fernanda Vitória Da Conceição Santos", turma: "4º Ano A (Integral)" },
+  "202330005832": { nome: "Hyohanna Ketylly Santos Bezerra", turma: "4º Ano A (Integral)" },
+  "202330006778": { nome: "José Elinaldo Dos Santos Silva", turma: "4º Ano A (Integral)" },
+  "202330006651": { nome: "João Lucas Olimpio Santos", turma: "4º Ano A (Integral)" },
+  "202330007031": { nome: "Kayque José Fernandes Dos Santos", turma: "4º Ano A (Integral)" },
+  "202330007238": { nome: "Kennedy Ruan Dias Souza", turma: "4º Ano A (Integral)" },
+  "202330008360": { nome: "Kevelly Victoria Ferreira Silva", turma: "4º Ano A (Integral)" },
+  "202330007416": { nome: "Laura Gabrielle Dos Santos Silva", turma: "4º Ano A (Integral)" },
+  "202330007588": { nome: "Leandson Gustavo Dos Santos Firmino", turma: "4º Ano A (Integral)" },
+  "202330007819": { nome: "Leticia Sofia Feliciano Dos Santos", turma: "4º Ano A (Integral)" },
+  "202330009045": { nome: "Luiz Eduardo Ferreira Santos", turma: "4º Ano A (Integral)" },
+  "202330008182": { nome: "Maria Luiza Da Conceição Silva", turma: "4º Ano A (Integral)" },
+  "202430004515": { nome: "Moisés Da Conceição Pires", turma: "4º Ano A (Integral)" },
+  "202330009789": { nome: "Nathália Lavínia Dos Santos Silva", turma: "4º Ano A (Integral)" },
+  "202330008880": { nome: "Sofia Manuella Da Silva", turma: "4º Ano A (Integral)" },
+  "202330010770": { nome: "Wellenilson Karlos Dos Santos Silva", turma: "4º Ano A (Integral)" },
+  "202530007654": { nome: "Yasmin Jamile Silva Dos Santos", turma: "4º Ano A (Integral)" },
+  "202330005538": { nome: "Alfredo Fernandes Dos Santos Neto", turma: "4º Ano B (Integral)" },
+  "202330005180": { nome: "Arthur Vinícius Da Silva Santos", turma: "4º Ano B (Integral)" },
+  "202630004010": { nome: "Erick Erinaldo Batista Dos Santos", turma: "4º Ano B (Integral)" },
+  "202630000487": { nome: "Ezequiel Bezerra Dos Santos", turma: "4º Ano B (Integral)" },
+  "202330005940": { nome: "Fábio Limeira Gois", turma: "4º Ano B (Integral)" },
+  "202330006929": { nome: "Germano Araújo Dos Santos", turma: "4º Ano B (Integral)" },
+  "202330005799": { nome: "Guilherme Soares Dos Santos", turma: "4º Ano B (Integral)" },
+  "202630000450": { nome: "Helem Vitória Rodrigues Da Silva", turma: "4º Ano B (Integral)" },
+  "202330007971": { nome: "José Guilherme Da Silva Dos Santos", turma: "4º Ano B (Integral)" },
+  "202330007800": { nome: "José Matheus De Oliveira Silva", turma: "4º Ano B (Integral)" },
+  "202330007283": { nome: "João Lucas Da Silva", turma: "4º Ano B (Integral)" },
+  "202330008852": { nome: "Laryssa Anielly Da Silva Santos", turma: "4º Ano B (Integral)" },
+  "202430005100": { nome: "Lívia Maria Da Silva Santos", turma: "4º Ano B (Integral)" },
+  "202330028917": { nome: "Maria Brunna Da Silva", turma: "4º Ano B (Integral)" },
+  "202330009279": { nome: "Maria Clara Alves Santos", turma: "4º Ano B (Integral)" },
+  "202330008001": { nome: "Maria Eduarda Dos Santos Rodrigues", turma: "4º Ano B (Integral)" },
+  "202330008404": { nome: "Maria Manuella Santos Pinheiro", turma: "4º Ano B (Integral)" },
+  "202330009591": { nome: "Maria Sophia Dos Santos", turma: "4º Ano B (Integral)" },
+  "202330008816": { nome: "Pietro Gabriel De Sousa Silva", turma: "4º Ano B (Integral)" },
+  "202330008979": { nome: "Uhailhendsson Pedro Souza Santos", turma: "4º Ano B (Integral)" },
+  "202330012022": { nome: "Ygor Alexsander Dos Santos", turma: "4º Ano B (Integral)" },
+  "202330009377": { nome: "Antonio Inácio Da Silva Neto", turma: "5º Ano A (Manhã)" },
+  "202330012962": { nome: "Heloísa Eduarda Santos", turma: "5º Ano A (Manhã)" },
+  "202330010206": { nome: "Jennyffer Gabriella Soares Da Silva", turma: "5º Ano A (Manhã)" },
+  "202330013333": { nome: "Johnatam Soares Da Silva", turma: "5º Ano A (Manhã)" },
+  "202330009493": { nome: "José Claudemir Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330010073": { nome: "José Matheus Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330011230": { nome: "José Pedro Santos Silva", turma: "5º Ano A (Manhã)" },
+  "202330011277": { nome: "José Wesley Honorato Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330005761": { nome: "José Williams Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330009626": { nome: "João Lucas De Almeida Santos", turma: "5º Ano A (Manhã)" },
+  "202330009760": { nome: "João Miguel Da Silva Santos", turma: "5º Ano A (Manhã)" },
+  "202330009958": { nome: "João Miguel Dos Santos Pereira", turma: "5º Ano A (Manhã)" },
+  "202330011348": { nome: "Karlos Henrique Souza Lira", turma: "5º Ano A (Manhã)" },
+  "202330011491": { nome: "Laerty Amaury Lima Santos", turma: "5º Ano A (Manhã)" },
+  "202330011419": { nome: "Lara Valentina Dos Santos Silva", turma: "5º Ano A (Manhã)" },
+  "202330011974": { nome: "Laura Sofia Dos Santos Souza", turma: "5º Ano A (Manhã)" },
+  "202330012050": { nome: "Lavynia Manuelle De Oliveira Silva", turma: "5º Ano A (Manhã)" },
+  "202330000371": { nome: "Luan Gabriel Da Silva Rodrigues", turma: "5º Ano A (Manhã)" },
+  "202330012130": { nome: "Luiz Henrique Rodrigues Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330012238": { nome: "Maewylly Aparecida Da Silva Santos", turma: "5º Ano A (Manhã)" },
+  "202330013899": { nome: "Maria Vitória Ferreira Santos", turma: "5º Ano A (Manhã)" },
+  "202330012265": { nome: "Pamela Da Silva Almeida", turma: "5º Ano A (Manhã)" },
+  "202330055763": { nome: "Pedro Kauan Bispo Dos Santos", turma: "5º Ano A (Manhã)" },
+  "202330014232": { nome: "Vito Kauan Da Silva Santos", turma: "5º Ano A (Manhã)" },
+  "202330012327": { nome: "Ygor Eduardo Da Silva Santos", turma: "5º Ano A (Manhã)" },
+  "202430004506": { nome: "Abraão Da Conceição Pires", turma: "5º Ano B (Manhã)" },
+  "202330009321": { nome: "Antônio Samuel Alves Viana", turma: "5º Ano B (Manhã)" },
+  "202430002950": { nome: "Bernardo Marques Da Silva Santos", turma: "5º Ano B (Manhã)" },
+  "202330009448": { nome: "Carlos Henrique Dos Santos", turma: "5º Ano B (Manhã)" },
+  "202530005391": { nome: "Davi De Lima", turma: "5º Ano B (Manhã)" },
+  "202630004038": { nome: "Erika Natália Batista Dos Santos", turma: "5º Ano B (Manhã)" },
+  "202330013191": { nome: "Jaison Gabriel Farias", turma: "5º Ano B (Manhã)" },
+  "202330010037": { nome: "Jasmynne Caelly Da Silva Santos", turma: "5º Ano B (Manhã)" },
+  "202330005411": { nome: "José Alexsandro Samuel Da Silva Santos", turma: "5º Ano B (Manhã)" },
+  "202330010298": { nome: "José Carlos Da Silva Filho", turma: "5º Ano B (Manhã)" },
+  "202330012149": { nome: "José Samuel Felix Dos Santos", turma: "5º Ano B (Manhã)" },
+  "202330013585": { nome: "Ketellen Beatriz Alves Dos Santos", turma: "5º Ano B (Manhã)" },
+  "202630003424": { nome: "Lara Vitória Maria Da Silva Lima", turma: "5º Ano B (Manhã)" },
+  "202330013754": { nome: "Lorena Oliveira Da Silva", turma: "5º Ano B (Manhã)" },
+  "202630000549": { nome: "Luanny Sabrina Da Silva Santos", turma: "5º Ano B (Manhã)" },
+  "202630000567": { nome: "Lucas Gabriel De Assis Santos", turma: "5º Ano B (Manhã)" },
+  "202330012425": { nome: "Luiz Gustavo Da Silva", turma: "5º Ano B (Manhã)" },
+  "202330013997": { nome: "Pedro Miguel Santos Do Nascimento", turma: "5º Ano B (Manhã)" },
+  "202430008873": { nome: "Raquel Vieira Da Silva", turma: "5º Ano B (Manhã)" },
+  "202330014027": { nome: "Samuel Gomes Dos Santos", turma: "5º Ano B (Manhã)" },
+  "202330012640": { nome: "Sophia Beatriz Dos Santos Silva", turma: "5º Ano B (Manhã)" },
+  "202330014072": { nome: "Sophia Emanuelly Silva Santos", turma: "5º Ano B (Manhã)" },
+  "202330014143": { nome: "Thaysllane Laryssa Vieira De Souza", turma: "5º Ano B (Manhã)" },
+  "202630000511": { nome: "Yuri Bernardo Da Silva Lima", turma: "5º Ano B (Manhã)" },
+  "202330012766": { nome: "Zac Refondini De Jesus", turma: "5º Ano B (Manhã)" },
+  "202330013048": { nome: "Ana Beatriz Silva Folli", turma: "6º Ano A (Tarde)" },
+  "202330013173": { nome: "Ana Júlia De Jesus Barbosa", turma: "6º Ano A (Tarde)" },
+  "202330013271": { nome: "Anne Geizyelle Da Silva", turma: "6º Ano A (Tarde)" },
+  "202330013351": { nome: "Anny Gabrielly Da Silva Ferreira", turma: "6º Ano A (Tarde)" },
+  "202330024490": { nome: "Cleverton Mauri Dos Santos", turma: "6º Ano A (Tarde)" },
+  "202330013576": { nome: "Felipe Dos Santos Silva Júnior", turma: "6º Ano A (Tarde)" },
+  "202530007233": { nome: "Grazyelle Lima Dos Anjos", turma: "6º Ano A (Tarde)" },
+  "202330014223": { nome: "José Gabriel Nunes Da Silva", turma: "6º Ano A (Tarde)" },
+  "202330014303": { nome: "José Reinaldo Dos Santos Silva", turma: "6º Ano A (Tarde)" },
+  "202330027482": { nome: "João Miguel De Barros Felix", turma: "6º Ano A (Tarde)" },
+  "202330031681": { nome: "Julia Marina Rodriguês Almeida", turma: "6º Ano A (Tarde)" },
+  "202330014475": { nome: "Júlia Maria De Souza Silva", turma: "6º Ano A (Tarde)" },
+  "202330014500": { nome: "Laura Cecília Mayve França Lima", turma: "6º Ano A (Tarde)" },
+  "202330019112": { nome: "Lohane Vitória Dos Santos Silva", turma: "6º Ano A (Tarde)" },
+  "202330014626": { nome: "Ludmylla Emanuelly Araújo Santos", turma: "6º Ano A (Tarde)" },
+  "202330018222": { nome: "Lídia Emanuelle Das Neves Silva", turma: "6º Ano A (Tarde)" },
+  "202330013235": { nome: "Maria Rayele Dos Santos Silva", turma: "6º Ano A (Tarde)" },
+  "202530002630": { nome: "Mirelle Sophia Da Silva Santos", turma: "6º Ano A (Tarde)" },
+  "202330014706": { nome: "Roberthy Kauan Dias Souza", turma: "6º Ano A (Tarde)" },
+  "202330014724": { nome: "Victor Alessandro De Souza Alves", turma: "6º Ano A (Tarde)" },
+  "202330017575": { nome: "Vitória Laís Dos Santos", turma: "6º Ano A (Tarde)" },
+  "202330014742": { nome: "Yasmim Vitória Dos Santos", turma: "6º Ano A (Tarde)" },
+  "202330017314": { nome: "Allana Maria Ferro", turma: "6º Ano B (Tarde)" },
+  "202430003008": { nome: "Ana Beatriz Farias Santos", turma: "6º Ano B (Tarde)" },
+  "202330017459": { nome: "Antony Mateus Dos Santos Duarte", turma: "6º Ano B (Tarde)" },
+  "202330017539": { nome: "Denilson Da Silva", turma: "6º Ano B (Tarde)" },
+  "202330017664": { nome: "Emanuelle Thereza Silva E Vitória", turma: "6º Ano B (Tarde)" },
+  "202330004325": { nome: "Emanuelly Vitória De Oliveira Santos", turma: "6º Ano B (Tarde)" },
+  "202330017931": { nome: "Guilherme Da Conceição Dos Santos", turma: "6º Ano B (Tarde)" },
+  "202330054603": { nome: "Ingrid Vitória Bispo Dos Santos", turma: "6º Ano B (Tarde)" },
+  "202330018115": { nome: "Israel Da Silva Farias", turma: "6º Ano B (Tarde)" },
+  "202330018394": { nome: "José Manoel Santos Barreto", turma: "6º Ano B (Tarde)" },
+  "202330018465": { nome: "José Marcelino Da Silva", turma: "6º Ano B (Tarde)" },
+  "202330019749": { nome: "José Matheus Dos Santos Araújo", turma: "6º Ano B (Tarde)" },
+  "202330018572": { nome: "José Rodolfo Dos Santos Silva", turma: "6º Ano B (Tarde)" },
+  "202330018714": { nome: "Maria Laíla Vitória Felix Dos Santos", turma: "6º Ano B (Tarde)" },
+  "202330018830": { nome: "Maria Talita Da Silva Santos", turma: "6º Ano B (Tarde)" },
+  "202330014653": { nome: "Maria Vitória Da Silva", turma: "6º Ano B (Tarde)" },
+  "202330005663": { nome: "Monnyelle Bianca De Oliveira Silva", turma: "6º Ano B (Tarde)" },
+  "202330018984": { nome: "Paulo Gabriel Santos Da Silva", turma: "6º Ano B (Tarde)" },
+  "202330019032": { nome: "Rayssa Sofia Silva Santana", turma: "6º Ano B (Tarde)" },
+  "202330019088": { nome: "Sophya Gabrielly Alves Santos", turma: "6º Ano B (Tarde)" },
+  "202430009558": { nome: "Wellington Thiago Dos Santos", turma: "6º Ano B (Tarde)" },
+  "202330019220": { nome: "Wesley Fabiano Souza Santos", turma: "6º Ano B (Tarde)" },
+  "202330019319": { nome: "Yuri Danilo Dos Santos", turma: "6º Ano B (Tarde)" },
+  "202330018886": { nome: "Alexia Pereira Marques", turma: "6º Ano C (Tarde)" },
+  "202630003433": { nome: "Ana Clara Da Silva", turma: "6º Ano C (Tarde)" },
+  "202330018993": { nome: "Davi Lucas Da Silva", turma: "6º Ano C (Tarde)" },
+  "202330019168": { nome: "Ellen Victoria Dos Santos", turma: "6º Ano C (Tarde)" },
+  "202330017717": { nome: "Evily Dos Santos Delmiro", turma: "6º Ano C (Tarde)" },
+  "202330019533": { nome: "Ilson Ricardo Alves Neto", turma: "6º Ano C (Tarde)" },
+  "202330013674": { nome: "Ingrid Mariana Da Silva Santos", turma: "6º Ano C (Tarde)" },
+  "202330019669": { nome: "Jadson Gomes Dos Santos Silva", turma: "6º Ano C (Tarde)" },
+  "202330019856": { nome: "Josyellem Carla Da Silva Santos", turma: "6º Ano C (Tarde)" },
+  "202330014582": { nome: "Leandro Francisco Da Silva Filho", turma: "6º Ano C (Tarde)" },
+  "202330019909": { nome: "Levi Oliveira Da Silva", turma: "6º Ano C (Tarde)" },
+  "202330019990": { nome: "Lucas Do Carmo Silva", turma: "6º Ano C (Tarde)" },
+  "202330020042": { nome: "Maria Amélia Alves Cassiano", turma: "6º Ano C (Tarde)" },
+  "202330019758": { nome: "Maria Cicera Da Silva", turma: "6º Ano C (Tarde)" },
+  "202330019954": { nome: "Maria Vitória Dos Santos Silva", turma: "6º Ano C (Tarde)" },
+  "202330020033": { nome: "Naylla Da Silva", turma: "6º Ano C (Tarde)" },
+  "202330020300": { nome: "Paulo Pedro Henrique Dos Santos", turma: "6º Ano C (Tarde)" },
+  "202330020418": { nome: "Pedro Gustavo Dos Santos Silva", turma: "6º Ano C (Tarde)" },
+  "202330021667": { nome: "Suzana Emanuelle Da Silva Ferreira", turma: "6º Ano C (Tarde)" },
+  "202530005417": { nome: "Walyson De Lima Silva", turma: "6º Ano C (Tarde)" },
+  "202330021774": { nome: "Ygor Vinicius Da Silva Lima", turma: "6º Ano C (Tarde)" },
+  "202330023198": { nome: "Ana Layres Pinheiro Da Silva", turma: "7º Ano A (Tarde)" },
+  "202330023868": { nome: "Anthony Manoel Da Silva Santos", turma: "7º Ano A (Tarde)" },
+  "202330024168": { nome: "Aryanne Alexandre Santos", turma: "7º Ano A (Tarde)" },
+  "202330024201": { nome: "Bruna Eduarda Borba De Jesus", turma: "7º Ano A (Tarde)" },
+  "202330024293": { nome: "Carlos Andre Souza Silva", turma: "7º Ano A (Tarde)" },
+  "202330024355": { nome: "Cauã Miguel Santos Ferreira", turma: "7º Ano A (Tarde)" },
+  "202330012372": { nome: "Deryck Daniel De Souza Santos", turma: "7º Ano A (Tarde)" },
+  "202330024417": { nome: "Elizabeth Keylla Santos Silva", turma: "7º Ano A (Tarde)" },
+  "202330026805": { nome: "Erick Estevão De Jesus Santos", turma: "7º Ano A (Tarde)" },
+  "202330026888": { nome: "Fernanda Da Silva Costa", turma: "7º Ano A (Tarde)" },
+  "202330028040": { nome: "Flávia Alessandra Da Silva Barbosa", turma: "7º Ano A (Tarde)" },
+  "202330024810": { nome: "Isabely Vitória Santos", turma: "7º Ano A (Tarde)" },
+  "202330013100": { nome: "Jamile Taís Silva Oliveira", turma: "7º Ano A (Tarde)" },
+  "202330027007": { nome: "Jeisy Carolina Dos Santos Pereira", turma: "7º Ano A (Tarde)" },
+  "202330027375": { nome: "José Holyver Jesus De Lira", turma: "7º Ano A (Tarde)" },
+  "202330027212": { nome: "João Guylherme Da Silva", turma: "7º Ano A (Tarde)" },
+  "202330027221": { nome: "João Miguel Da Silva Farias", turma: "7º Ano A (Tarde)" },
+  "202330021854": { nome: "Júlio César Silva Santos", turma: "7º Ano A (Tarde)" },
+  "202330027606": { nome: "Laura Beatriz De França Soares", turma: "7º Ano A (Tarde)" },
+  "202330027713": { nome: "Maria Cecylia Da Silva", turma: "7º Ano A (Tarde)" },
+  "202330027796": { nome: "Maria Cecília Souza Santos", turma: "7º Ano A (Tarde)" },
+  "202330027965": { nome: "Maria Heloiza Lopes Da Silva", turma: "7º Ano A (Tarde)" },
+  "202630004047": { nome: "Maria Vitória Batista Dos Santos", turma: "7º Ano A (Tarde)" },
+  "202330028069": { nome: "Mikael Henrique Vieira Da Silva", turma: "7º Ano A (Tarde)" },
+  "202330028200": { nome: "Nicolas Gabriel Silva Dos Santos", turma: "7º Ano A (Tarde)" },
+  "202330028292": { nome: "Paulo Henrique Dos Santos", turma: "7º Ano A (Tarde)" },
+  "202630000656": { nome: "Rafaell Grigório Dos Santos Oliveira", turma: "7º Ano A (Tarde)" },
+  "202330025479": { nome: "Samara Letícia De França Paixão Ribeiro", turma: "7º Ano A (Tarde)" },
+  "202330028425": { nome: "Thanauã Guilherme Da Silva Costa", turma: "7º Ano A (Tarde)" },
+  "202330027268": { nome: "Uandrielly Kemilly Silva Nunes", turma: "7º Ano A (Tarde)" },
+  "202330028505": { nome: "Yasmim Anita Dos Santos Silva", turma: "7º Ano A (Tarde)" },
+  "202330021845": { nome: "Adryel Da Silva Fernandes", turma: "7º Ano B (Tarde)" },
+  "202330024391": { nome: "Ana Clara Batista Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330041131": { nome: "Carlos Maciel Dos Santos Araújo", turma: "7º Ano B (Tarde)" },
+  "202430009315": { nome: "Danielly Costa Bezerra", turma: "7º Ano B (Tarde)" },
+  "202330024515": { nome: "Emilly Dos Santos", turma: "7º Ano B (Tarde)" },
+  "202330024758": { nome: "Hellen Ludimila Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330013880": { nome: "José Ednaldo Dos Santos Silva", turma: "7º Ano B (Tarde)" },
+  "202330012953": { nome: "José Eduardo Dos Santos Souza", turma: "7º Ano B (Tarde)" },
+  "202330025030": { nome: "José Lucas Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330018652": { nome: "José Weverton Dos Santos Silva", turma: "7º Ano B (Tarde)" },
+  "202330024865": { nome: "João Lucas De Oliveira Silva", turma: "7º Ano B (Tarde)" },
+  "202330024963": { nome: "João Vitor Dos Santos Vieira", turma: "7º Ano B (Tarde)" },
+  "202630000647": { nome: "Juliana Vitória Alves De Almeida", turma: "7º Ano B (Tarde)" },
+  "202330025058": { nome: "Kamily Brito Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330025085": { nome: "Ketilly Lauanny Mendes", turma: "7º Ano B (Tarde)" },
+  "202330025110": { nome: "Lazaro Otavio Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330027624": { nome: "Lucas Micael Da Silva Rodrigues", turma: "7º Ano B (Tarde)" },
+  "202330025147": { nome: "Maria Laura Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330025209": { nome: "Maria Viviane Dos Santos Oliveira", turma: "7º Ano B (Tarde)" },
+  "202430003053": { nome: "Mateus Dos Anjos Pereira", turma: "7º Ano B (Tarde)" },
+  "202330044474": { nome: "Nicolas Gustavo Dos Santos Costa", turma: "7º Ano B (Tarde)" },
+  "202330020089": { nome: "Nycolas Eduardo Da Silva", turma: "7º Ano B (Tarde)" },
+  "202330025316": { nome: "Paulo Sergio Dos Santos", turma: "7º Ano B (Tarde)" },
+  "202330025370": { nome: "Pedro Miguel Alves Viana", turma: "7º Ano B (Tarde)" },
+  "202630002786": { nome: "Rian Victor Pereira Dos Santos", turma: "7º Ano B (Tarde)" },
+  "202330028372": { nome: "Rosyellen Santos Almeida", turma: "7º Ano B (Tarde)" },
+  "202330027240": { nome: "Sofia Gabrielle Ferreira De Lima", turma: "7º Ano B (Tarde)" },
+  "202330028461": { nome: "Weverton Daniel Palmeira Silva", turma: "7º Ano B (Tarde)" },
+  "202530002907": { nome: "Abraão Silva Santos", turma: "8º Ano A (Tarde)" },
+  "202330026995": { nome: "Alice Maiara Da Silva Oliveira", turma: "8º Ano A (Tarde)" },
+  "202330027061": { nome: "Allerandro Barros Dos Santos", turma: "8º Ano A (Tarde)" },
+  "202530003501": { nome: "Anderson Araujo Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330027393": { nome: "Arthur Fernando Rocha Santos", turma: "8º Ano A (Tarde)" },
+  "202430003106": { nome: "Danilo Lima Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330030675": { nome: "Davi Silva Dos Santos", turma: "8º Ano A (Tarde)" },
+  "202330034469": { nome: "Guilhermy Valentym Da Silva Tavares", turma: "8º Ano A (Tarde)" },
+  "202330032947": { nome: "Ilany Vitória Santana Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330013487": { nome: "Jose Guilherme Guimaraes Barbosa", turma: "8º Ano A (Tarde)" },
+  "202430003124": { nome: "João Lucas Araújo Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330040985": { nome: "Kauay De Jesus Santos", turma: "8º Ano A (Tarde)" },
+  "202330033087": { nome: "Ketylle Naely Soares Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330028176": { nome: "Luan Jaciel Do Carmo Silva", turma: "8º Ano A (Tarde)" },
+  "202330033200": { nome: "Luis Otávio Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330033318": { nome: "Luiz Teovane Da Silva", turma: "8º Ano A (Tarde)" },
+  "202330030479": { nome: "Manoelly Batista Nunes", turma: "8º Ano A (Tarde)" },
+  "202330011849": { nome: "Maria Isabela Dos Santos", turma: "8º Ano A (Tarde)" },
+  "202330028318": { nome: "Nycole Sofya Alves Santos", turma: "8º Ano A (Tarde)" },
+  "202330033541": { nome: "Paulo Ricardo Santos Almeida", turma: "8º Ano A (Tarde)" },
+  "202630002697": { nome: "Pedro Henrique Dos Santos Cabral", turma: "8º Ano A (Tarde)" },
+  "202530002854": { nome: "Rayssa Dos Santos Soares", turma: "8º Ano A (Tarde)" },
+  "202430009692": { nome: "Weslley Andrew Ferro Dos Santos", turma: "8º Ano A (Tarde)" },
+  "202330029585": { nome: "Alana Beatriz Dos Santos Silva", turma: "8º Ano B (Tarde)" },
+  "202330030183": { nome: "Celine Valerio Da Silva", turma: "8º Ano B (Tarde)" },
+  "202330030316": { nome: "Cláudio Kayke Dos Santos Lira", turma: "8º Ano B (Tarde)" },
+  "202330030620": { nome: "Emanuel Messias Da Silva", turma: "8º Ano B (Tarde)" },
+  "202330030773": { nome: "Emily Thalia Cipriano Dos Santos", turma: "8º Ano B (Tarde)" },
+  "202330031046": { nome: "Harry José De Oliveira Temotio", turma: "8º Ano B (Tarde)" },
+  "202330032858": { nome: "Henrique Gabriel Dos Santos Souza", turma: "8º Ano B (Tarde)" },
+  "202330027802": { nome: "Ian Refondini De Jesus", turma: "8º Ano B (Tarde)" },
+  "202330032910": { nome: "Igor Moureira Dos Santos", turma: "8º Ano B (Tarde)" },
+  "202330028031": { nome: "Josefa Franciele Dos Santos Farias", turma: "8º Ano B (Tarde)" },
+  "202330030782": { nome: "José Wesley Dos Santos Silva", turma: "8º Ano B (Tarde)" },
+  "202330030960": { nome: "Júlia Alexandre Silva", turma: "8º Ano B (Tarde)" },
+  "202330031028": { nome: "Laisa Maria Dos Santos Souza", turma: "8º Ano B (Tarde)" },
+  "202330031251": { nome: "Maria Da Conceição Santos", turma: "8º Ano B (Tarde)" },
+  "202330033372": { nome: "Maria Eduarda Da Silva", turma: "8º Ano B (Tarde)" },
+  "202330033416": { nome: "Maria Luiza Dos Santos Souza", turma: "8º Ano B (Tarde)" },
+  "202330031340": { nome: "Maria Lívia Dos Santos Silva", turma: "8º Ano B (Tarde)" },
+  "202330031387": { nome: "Mayra Alves Dos Santos", turma: "8º Ano B (Tarde)" },
+  "202330031832": { nome: "Mikael Henrique Silva De Abreu", turma: "8º Ano B (Tarde)" },
+  "202330033480": { nome: "Nestor Gabriel Da Silva Santos", turma: "8º Ano B (Tarde)" },
+  "202330033588": { nome: "Raíssa Isabele Pontes Silva", turma: "8º Ano B (Tarde)" },
+  "202330032230": { nome: "Ryanna Marques Oliveira", turma: "8º Ano B (Tarde)" },
+  "202330031940": { nome: "Thayla Vitória Vieira De Souza", turma: "8º Ano B (Tarde)" },
+  "202330032007": { nome: "Whytney Gabryelle Dos Santos Silva", turma: "8º Ano B (Tarde)" },
+  "202330032105": { nome: "Yara Conceição Da Silva", turma: "8º Ano B (Tarde)" },
+  "202330032188": { nome: "Yasmim Conceição Da Silva", turma: "8º Ano B (Tarde)" },
+  "202330033292": { nome: "Amanda Yasmim Nunes Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330033390": { nome: "Ana Clara Honorato Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330033434": { nome: "Carlos Manoel Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330027535": { nome: "Cledja Dos Santos Silva", turma: "9º Ano A (Tarde)" },
+  "202330033238": { nome: "Eduardo Dos Santos Costa", turma: "9º Ano A (Tarde)" },
+  "202330034128": { nome: "Emanuela Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034422": { nome: "Emilly Jaciele Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034280": { nome: "Fabiana De França Santos", turma: "9º Ano A (Tarde)" },
+  "202330034342": { nome: "Izadora Beatriz Silva", turma: "9º Ano A (Tarde)" },
+  "202330034683": { nome: "Jean Guilherme Dos Santos Silva", turma: "9º Ano A (Tarde)" },
+  "202330034576": { nome: "Joanna Darkíria Ferro Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330034610": { nome: "Joseline Luisa Da Silva", turma: "9º Ano A (Tarde)" },
+  "202630003166": { nome: "José Anderson Lima Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330027900": { nome: "João Gabriel Ferreira Santos", turma: "9º Ano A (Tarde)" },
+  "202330037424": { nome: "João Pedro Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034656": { nome: "Kaelayne Silva Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034816": { nome: "Larissa Dos Santos Silva", turma: "9º Ano A (Tarde)" },
+  "202330034825": { nome: "Laura Aparecida Santos", turma: "9º Ano A (Tarde)" },
+  "202330034843": { nome: "Lívia Karolayne Martins Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034905": { nome: "Marcos Guilherme Alves Santos", turma: "9º Ano A (Tarde)" },
+  "202330039966": { nome: "Marcos Vinícius Silva Gonçalves", turma: "9º Ano A (Tarde)" },
+  "202330033031": { nome: "Moisés Victor De Jesus Silva", turma: "9º Ano A (Tarde)" },
+  "202330040484": { nome: "Rosana Estefane Dos Santos", turma: "9º Ano A (Tarde)" },
+  "202330034950": { nome: "Rívia Gabrielly Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330035018": { nome: "Thauane Maria Dos Santos Silva", turma: "9º Ano A (Tarde)" },
+  "202330035036": { nome: "Vitor Moureira Da Silva", turma: "9º Ano A (Tarde)" },
+  "202330033130": { nome: "Vitória Maria De Moraes Costa", turma: "9º Ano A (Tarde)" },
+  "202530007037": { nome: "Ana Cleide Dos Anjos Da Silva", turma: "2º PERIODO A (Noite)" },
+  "202630003406": { nome: "Antônio De Souza", turma: "1º PERIODO A (Noite)" },
+  "202630003685": { nome: "Claudeci Da Silva Santos", turma: "1º PERIODO A (Noite)" },
+  "202630003095": { nome: "Cícero Da Silva", turma: "1º PERIODO A (Noite)" },
+  "202530005373": { nome: "Elisângela Dos Santos", turma: "3º PERIODO A (Noite)" },
+  "202630003120": { nome: "Estelina Maria Da Conceição", turma: "1º PERIODO A (Noite)" },
+  "202530005364": { nome: "Francisco Florentino Gomes", turma: "3º PERIODO A (Noite)" },
+  "202630003809": { nome: "Gerson Dos Santos", turma: "1º PERIODO A (Noite)" },
+  "202630003110": { nome: "Gilvaneide De Andrade De Paulo", turma: "1º PERIODO A (Noite)" },
+  "202630003139": { nome: "Ivone Fernandes Dos Santos", turma: "1º PERIODO A (Noite)" },
+  "202530004821": { nome: "Jose Demetrio Da Silva", turma: "3º PERIODO A (Noite)" },
+  "202630003818": { nome: "Josinaldo Rozendo Da Silva", turma: "1º PERIODO A (Noite)" },
+  "202630003101": { nome: "José Olimpio Da Silva", turma: "1º PERIODO A (Noite)" },
+  "202430008434": { nome: "José Paulo Da Silva", turma: "2º PERIODO A (Noite)" },
+  "202630003255": { nome: "José Ronaldo Dão", turma: "1º PERIODO A (Noite)" },
+  "202530004812": { nome: "Luiz Antonio Da Silva", turma: "3º PERIODO A (Noite)" },
+  "202630003415": { nome: "Maria Aparecida Lira Santos", turma: "1º PERIODO A (Noite)" },
+  "202430005334": { nome: "Maria Claudilene Dos Santos Silva", turma: "2º PERIODO A (Noite)" },
+  "202630003264": { nome: "Maria De Fátima Cavalcante", turma: "1º PERIODO A (Noite)" },
+  "202530004797": { nome: "Maria Izabel Dos Santos", turma: "3º PERIODO A (Noite)" },
+  "202630003021": { nome: "Maria José Dos Santos", turma: "1º PERIODO A (Noite)" },
+  "202630003273": { nome: "Maria Solidade Dos Santos", turma: "1º PERIODO A (Noite)" },
+  "202630003676": { nome: "Valdeci Heliodoro Da Silva", turma: "1º PERIODO A (Noite)" },
+  "202630003282": { nome: "Valdir Ramiro Miguel Dos Santos", turma: "1º PERIODO A (Noite)" },
+  "202530004788": { nome: "Zefixania Tenorio De Souza", turma: "3º PERIODO A (Noite)" },
+  "202430004865": { nome: "Angela Maria Carvalho Dos Santos", turma: "5º PERÍODO B (Noite)" },
+  "202330044680": { nome: "Djanira Dos Santos", turma: "4º PERÍODO B (Noite)" },
+  "202430008416": { nome: "Edilsa Santos Dos Anjos", turma: "4º PERÍODO B (Noite)" },
+  "202530005168": { nome: "Elielma Bezrra De Brito", turma: "5º PERÍODO B (Noite)" },
+  "202330044901": { nome: "Enalva Da Silva Tenório", turma: "5º PERÍODO B (Noite)" },
+  "202530007396": { nome: "Fernanda Da Conceição", turma: "4º PERÍODO B (Noite)" },
+  "202630003470": { nome: "Gerusa Dos Santos", turma: "5º PERÍODO B (Noite)" },
+  "202330043252": { nome: "José Alfredo Soares Da Silva", turma: "5º PERÍODO B (Noite)" },
+  "202330044572": { nome: "Luzinete De Andrade Paulo", turma: "5º PERÍODO B (Noite)" },
+  "202330044554": { nome: "Maria Inês Cirilo Da Silva", turma: "5º PERÍODO B (Noite)" },
+  "202630003827": { nome: "Maria Quitéria Da Silva", turma: "5º PERÍODO B (Noite)" },
+  "202330043270": { nome: "Patricia Silva Santos", turma: "4º PERÍODO B (Noite)" },
+  "202530006011": { nome: "Tanise Lingerrane Dos Santos", turma: "5º PERÍODO B (Noite)" },
+  "202430005405": { nome: "Terezinha Vitoriano Da Silva", turma: "5º PERÍODO B (Noite)" },
+  "202530006844": { nome: "Adeilma Guilherme Alves Da Silva", turma: "7º PERÍODO A (Noite)" },
+  "202630003540": { nome: "Adriele Mirele De Oliveira", turma: "9º PERÍODO A (Noite)" },
+  "202630004154": { nome: "Amanda Gabriely Cardoso Dos Santos", turma: "7º PERÍODO A (Noite)" },
+  "202530006835": { nome: "Ana Clecia De Oliveira Santos", turma: "7º PERÍODO A (Noite)" },
+  "202530004859": { nome: "Antenor Da Silva Santos", turma: "6º PERÍODO A (Noite)" },
+  "202330044545": { nome: "Caetana Bezerra Da Silva", turma: "6º PERÍODO A (Noite)" },
+  "202330044509": { nome: "Carmem Maria Da Silva Ramos", turma: "7º PERÍODO A (Noite)" },
+  "202330035303": { nome: "Devid Silva Santos", turma: "9º PERÍODO A (Noite)" },
+  "202330051610": { nome: "Edjane Bezerra De Brito", turma: "8º PERÍODO A (Noite)" },
+  "202530004877": { nome: "Edneusa Santos De Souza", turma: "9º PERÍODO A (Noite)" },
+  "202530005829": { nome: "Eliege Bezerra De Brito", turma: "9º PERÍODO A (Noite)" },
+  "202530005426": { nome: "Elizangela Alexandre Da Silva", turma: "8º PERÍODO A (Noite)" },
+  "202630003836": { nome: "Ernandes Dos Santos Fonseca", turma: "6º PERÍODO A (Noite)" },
+  "202330052968": { nome: "Ilane Regina Da Silva", turma: "9º PERÍODO A (Noite)" },
+  "202330055315": { nome: "Ione Lopes Da Silva", turma: "9º PERÍODO A (Noite)" },
+  "202430009271": { nome: "Ivoneide De Paula Oliveira", turma: "6º PERÍODO A (Noite)" },
+  "202330051076": { nome: "Josefa Barbosa Da Silva", turma: "7º PERÍODO A (Noite)" },
+  "202330046227": { nome: "Josilene Pedro Da Silva", turma: "7º PERÍODO A (Noite)" },
+  "202330044311": { nome: "José Antônio Dos Santos", turma: "6º PERÍODO A (Noite)" },
+  "202530006808": { nome: "Juarez Vitoriano Da Silva", turma: "7º PERÍODO A (Noite)" },
+  "202330045248": { nome: "Juvelina De Souza Santos", turma: "6º PERÍODO A (Noite)" },
+  "202330044741": { nome: "Katia Maria Da Silva Dias", turma: "7º PERÍODO A (Noite)" },
+  "202430009137": { nome: "Mabele Dos Santos Jesus", turma: "9º PERÍODO A (Noite)" },
+  "202330049022": { nome: "Maria Betânia Dos Santos", turma: "7º PERÍODO A (Noite)" },
+  "202330044607": { nome: "Maria Cicera Da Silva", turma: "6º PERÍODO A (Noite)" },
+  "202330051100": { nome: "Maria Cicera Da Silva Santos", turma: "7º PERÍODO A (Noite)" },
+  "202530004901": { nome: "Maria Cícera Da Silva Santos", turma: "8º PERÍODO A (Noite)" },
+  "202330052180": { nome: "Maria De Lourdes Dos Santos", turma: "6º PERÍODO A (Noite)" },
+  "202330049944": { nome: "Maria José Da Conceição Silva", turma: "9º PERÍODO A (Noite)" },
+  "202330044590": { nome: "Maria José Da Silva", turma: "8º PERÍODO A (Noite)" },
+  "202530004868": { nome: "Maria Rita Da Silva Santos", turma: "6º PERÍODO A (Noite)" },
+  "202330055208": { nome: "Marta Antunes Bezerra", turma: "6º PERÍODO A (Noite)" },
+  "202430009208": { nome: "Mirian Alves Da Silva", turma: "9º PERÍODO A (Noite)" },
+  "202630003489": { nome: "Paulo Venâncio Da Silva", turma: "8º PERÍODO A (Noite)" },
+  "202630003649": { nome: "Reinaldo Da Silva", turma: "9º PERÍODO A (Noite)" },
+  "202430005432": { nome: "Reinaldo Francisco Dos Santos", turma: "6º PERÍODO A (Noite)" },
+  "202430009262": { nome: "Sivaldo Rodrigues Da Silva", turma: "6º PERÍODO A (Noite)" },
+  "202330046737": { nome: "Teresinha Josefa Da Silva", turma: "6º PERÍODO A (Noite)" },
+  "202330051666": { nome: "Valdeci Ferreira Da Silva", turma: "8º PERÍODO A (Noite)" }
+};
+
+let registrosHoje = JSON.parse(localStorage.getItem('registrosHoje') || '[]');
+// Limpar se for novo dia
+const hoje = new Date().toLocaleDateString('pt-BR');
+if (registrosHoje.length > 0 && registrosHoje[0].data !== hoje) {
+  registrosHoje = [];
+}
+
+// ───── Relógio ─────
+function atualizarRelogio() {
+  const agora = new Date();
+  document.getElementById('statHora').textContent =
+    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('statData').textContent =
+    agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ───── Scanner ─────
+function startScanner() {
+  if (isScanning) return;
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display = 'block';
+
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    onScanSuccess,
+    () => {}
+  ).then(() => { isScanning = true; })
+   .catch(err => {
+     showFeedback('err', '⚠️ Câmera não disponível', 'Verifique as permissões do navegador.');
+     document.getElementById('btnStart').style.display = 'block';
+     document.getElementById('btnStop').style.display = 'none';
+   });
+}
+
+function stopScanner() {
+  if (scanner && isScanning) {
+    scanner.stop().then(() => {
+      isScanning = false;
+      document.getElementById('btnStart').style.display = 'block';
+      document.getElementById('btnStop').style.display = 'none';
+    });
+  }
+}
+
+function onScanSuccess(decodedText) {
+  const agora = Date.now();
+  if (decodedText === lastScan && agora - lastScanTime < COOLDOWN_MS) return;
+  lastScan = decodedText;
+  lastScanTime = agora;
+  processarMatricula(decodedText.trim());
+}
+
+function registrarManual() {
+  const val = document.getElementById('manualId').value.trim();
+  if (!val) return;
+  processarMatricula(val);
+  document.getElementById('manualId').value = '';
+}
+
+// ───── Processamento ─────
+function processarMatricula(matricula) {
+  const agora = new Date();
+  const hora  = agora.toLocaleTimeString('pt-BR');
+  const data  = agora.toLocaleDateString('pt-BR');
+  const turno = document.getElementById('turno').value;
+
+  // Verificar duplicata no dia
+  const jaRegistrado = registrosHoje.find(r => r.matricula === matricula);
+  if (jaRegistrado) {
+    showFeedback('dup', '⚠️ Já registrado hoje!',
+      `${jaRegistrado.nome || matricula} · Entrada: ${jaRegistrado.hora}`);
+    vibrar([100, 50, 100]);
+    return;
+  }
+
+  const aluno = alunosDB[matricula];
+  const nome  = aluno ? aluno.nome : `Matrícula ${matricula}`;
+  const turma = aluno ? aluno.turma : '—';
+
+  const registro = { matricula, nome, turma, data, hora, turno, status: 'Presente' };
+  registrosHoje.unshift(registro);
+  salvarLocal();
+  renderizarLog();
+  atualizarStats();
+
+  showFeedback('ok', `✅ ${nome}`, `Turma ${turma} · ${hora} · ${turno}`);
+  vibrar([200]);
+
+  // Enviar para Google Sheets
+  enviarParaSheets(registro);
+}
+
+// ───── Feedback visual ─────
+function showFeedback(tipo, titulo, detalhe) {
+  const el = document.getElementById('feedback');
+  el.className = `feedback ${tipo}`;
+  document.getElementById('fbTitulo').textContent = titulo;
+  document.getElementById('fbDetalhe').textContent = detalhe;
+
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = 'feedback'; }, 4000);
+}
+
+function vibrar(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ───── Log ─────
+function renderizarLog() {
+  const container = document.getElementById('logList');
+  if (registrosHoje.length === 0) {
+    container.innerHTML = '<div class="log-empty">Nenhum registro ainda.</div>';
+    return;
+  }
+  container.innerHTML = registrosHoje.slice(0, 30).map(r => {
+    const ini = r.nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+    return `<div class="log-item">
+      <div class="log-avatar">${ini}</div>
+      <div>
+        <div class="log-name">${r.nome}</div>
+        <div class="log-meta">Turma ${r.turma} · Matrícula ${r.matricula}</div>
+      </div>
+      <div class="log-time">${r.hora}</div>
+    </div>`;
+  }).join('');
+}
+
+function atualizarStats() {
+  document.getElementById('statTotal').textContent = registrosHoje.length;
+  document.getElementById('badgeCount').textContent = registrosHoje.length;
+}
+
+function limparLog() {
+  if (!confirm('Apagar todos os registros locais de hoje?')) return;
+  registrosHoje = [];
+  salvarLocal();
+  renderizarLog();
+  atualizarStats();
+}
+
+// ───── Storage ─────
+function salvarLocal() {
+  localStorage.setItem('registrosHoje', JSON.stringify(registrosHoje));
+}
+
+// ───── Exportar CSV ─────
+function exportarCSV() {
+  if (registrosHoje.length === 0) { alert('Nenhum registro para exportar.'); return; }
+  const header = 'Matrícula,Nome,Turma,Data,Hora,Turno,Status\n';
+  const rows = registrosHoje.map(r =>
+    `"${r.matricula}","${r.nome}","${r.turma}","${r.data}","${r.hora}","${r.turno}","${r.status}"`
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `frequencia_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+}
+
+// ───── Google Sheets via Apps Script ─────
+async function enviarParaSheets(registro) {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url || !url.startsWith('https://script.google.com')) return;
+
+  try {
+    const params = new URLSearchParams({
+      action: 'registrarPresenca',
+      matricula: registro.matricula,
+      nome: registro.nome,
+      turma: registro.turma,
+      data: registro.data,
+      hora: registro.hora,
+      turno: registro.turno,
+      status: registro.status
+    });
+    await fetch(`${url}?${params}`, { method: 'GET', mode: 'no-cors' });
+  } catch (e) {
+    console.warn('Falha ao enviar para Sheets (modo offline):', e);
+  }
+}
+
+// ───── Init ─────
+renderizarLog();
+atualizarStats();
+
+// Tecla Enter no campo manual
+document.getElementById('manualId').addEventListener('keydown', e => {
+  if (e.key === 'Enter') registrarManual();
+});
+</script>
+</body>
+</html>
