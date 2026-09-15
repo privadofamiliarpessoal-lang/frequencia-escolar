@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sistema de Frequência Escolar</title>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+  // Se a rede bloquear o CDN acima (comum em redes de prefeitura/escola),
+  // tenta um segundo CDN antes da página terminar de carregar.
+  window.addEventListener('load', function () {
+    if (typeof Chart === 'undefined') {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+      s.onload = function () { if (typeof carregarDashboard === 'function') carregarDashboard(); };
+      document.head.appendChild(s);
+    }
+  });
+</script>
+<style>
+:root {
+  --azul-900: #0b2c5c;
+  --azul-700: #1a56db;
+  --azul-500: #3b82f6;
+  --azul-100: #dbeafe;
+  --azul-50:  #eff6ff;
+  --verde: #16a34a;
+  --amarelo: #ca8a04;
+  --vermelho: #dc2626;
+  --roxo: #7c3aed;
+  --laranja: #ea580c;
+  --cinza-900: #111827;
+  --cinza-600: #4b5563;
+  --cinza-300: #d1d5db;
+  --cinza-100: #f3f4f6;
+  --branco: #ffffff;
+  --raio: 10px;
+  --sombra: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  background: var(--cinza-100);
+  color: var(--cinza-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Topbar (igual ao SEMED Evidências) ---------- */
+.topbar {
+  background: linear-gradient(90deg, var(--azul-900), var(--azul-700));
+  color: var(--branco);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--sombra);
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar .marca-linha { display: flex; align-items: center; gap: 12px; }
+.topbar .marca-icone {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.topbar .marca-texto { display: flex; flex-direction: column; line-height: 1.3; }
+.topbar .marca-texto strong { font-size: 16px; }
+.topbar .marca-texto span { font-size: 11px; opacity: 0.85; }
+.topbar .usuario { font-size: 12px; text-align: right; opacity: 0.9; }
+.topbar .usuario .relogio { font-size: 15px; font-weight: 700; }
+
+/* ---------- Abas (extensão do padrão SEMED p/ navegação por painel) ---------- */
+.abas-nav {
+  background: var(--branco);
+  border-bottom: 1px solid var(--cinza-300);
+  position: sticky; top: 72px; z-index: 15;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.abas-nav .abas-inner { max-width: 1200px; margin: 0 auto; display: flex; }
+.aba-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 14px 18px; font-size: 13px; font-weight: 600;
+  color: var(--cinza-600); border-bottom: 3px solid transparent;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.aba-btn:hover { color: var(--azul-700); }
+.aba-btn.ativa { color: var(--azul-700); border-bottom-color: var(--azul-700); }
+.painel { display: none; }
+.painel.ativa { display: block; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+.card {
+  background: var(--branco);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+.kpi { text-align: center; }
+.kpi .valor { font-size: 30px; font-weight: 700; color: var(--azul-700); }
+.kpi .rotulo { font-size: 12px; color: var(--cinza-600); text-transform: uppercase; letter-spacing: 0.03em; }
+.kpi.kpi-verde .valor { color: var(--verde); }
+.kpi.kpi-vermelho .valor { color: var(--vermelho); }
+.kpi.kpi-laranja .valor { color: var(--laranja); }
+
+h1, h2, h3 { color: var(--azul-900); margin-top: 0; }
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: var(--cinza-900); }
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--cinza-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--branco);
+}
+textarea { resize: vertical; min-height: 70px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul-500); box-shadow: 0 0 0 3px var(--azul-100); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--azul-700); color: var(--branco);
+  border: none; padding: 10px 18px; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btn:hover { background: var(--azul-900); }
+.btn-secundario { background: var(--cinza-100); color: var(--cinza-900); }
+.btn-secundario:hover { background: var(--cinza-300); }
+.btn-sucesso { background: var(--verde); }
+.btn-perigo { background: var(--vermelho); }
+.btn-bloco { width: 100%; justify-content: center; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+}
+.badge-verde    { background: #dcfce7; color: #166534; }
+.badge-amarelo  { background: #fef9c3; color: #854d0e; }
+.badge-vermelho { background: #fee2e2; color: #991b1b; }
+.badge-azul     { background: #dbeafe; color: #1e40af; }
+.badge-laranja  { background: #ffedd5; color: #9a3412; }
+.badge-roxo     { background: #ede9fe; color: #5b21b6; }
+.badge-cinza    { background: var(--cinza-100); color: var(--cinza-600); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--cinza-100); }
+th { color: var(--cinza-600); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+tr:hover td { background: var(--azul-50); }
+.tabela-scroll { overflow-x: auto; }
+
+.progresso { background: var(--cinza-100); border-radius: 999px; height: 10px; overflow: hidden; }
+.progresso .barra { background: linear-gradient(90deg, var(--azul-500), var(--azul-700)); height: 100%; transition: width 0.4s ease; }
+
+.aviso { padding: 12px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+.aviso-erro { background: #fee2e2; color: #991b1b; }
+.aviso-ok { background: #dcfce7; color: #166534; }
+.aviso-info { background: var(--azul-50); color: var(--azul-900); }
+
+.spinner {
+  width: 18px; height: 18px; border: 3px solid var(--azul-100);
+  border-top-color: var(--azul-700); border-radius: 50%;
+  animation: girar 0.7s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+.oculto { display: none !important; }
+
+/* ---------- Específico do Scanner ---------- */
+.scanner-wrap { max-width: 480px; margin: 0 auto; }
+#reader { border-radius: 10px; overflow: hidden; margin-bottom: 12px; border: 3px solid var(--azul-500); background: #111; }
+.manual-row { display: flex; gap: 8px; margin-top: 4px; }
+.manual-row input { margin-bottom: 0; flex: 1; }
+.log-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 8px; margin-bottom: 6px;
+  background: var(--cinza-100); border-left: 4px solid var(--verde); font-size: 13px;
+}
+.log-item.pendente { border-left-color: var(--amarelo); }
+.log-item.erro { border-left-color: var(--vermelho); }
+.log-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--azul-500), var(--azul-900)); color: white;
+}
+.log-name { font-weight: 700; }
+.log-meta { color: var(--cinza-600); font-size: 11px; }
+.log-time { margin-left: auto; font-size: 12px; color: var(--azul-700); font-weight: 600; text-align: right; }
+.log-empty { text-align: center; color: var(--cinza-600); padding: 18px; font-size: 13px; }
+
+.filtro-linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.filtro-linha > div { flex: 1; min-width: 140px; }
+
+@media (max-width: 640px) {
+  .container { padding: 12px; }
+  .topbar { padding: 12px; }
+  .card { padding: 14px; }
+  .abas-nav { top: 68px; }
+}
+
+/* ---------- Tela de Confirmação (telão) ---------- */
+.tela-confirmacao { max-width: 1100px; margin: 0 auto; }
+.tc-topo {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+}
+.tc-total {
+  background: var(--branco); border-radius: var(--raio); box-shadow: var(--sombra);
+  padding: 10px 20px; text-align: center; line-height: 1.1;
+}
+.tc-total span { display: block; font-size: 26px; font-weight: 800; color: var(--azul-700); }
+.tc-total small { font-size: 11px; color: var(--cinza-600); text-transform: uppercase; }
+.tc-relogio {
+  font-size: 22px; font-weight: 700; color: var(--azul-900);
+  background: var(--branco); border-radius: var(--raio); box-shadow: var(--sombra);
+  padding: 10px 18px;
+}
+.tc-ultimo {
+  background: linear-gradient(90deg, var(--verde), #15803d);
+  color: white; border-radius: 16px; padding: 26px 30px;
+  display: flex; align-items: center; gap: 22px; margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(22,163,74,0.35);
+  animation: pulsarEntrada 0.5s ease;
+}
+@keyframes pulsarEntrada { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tc-ultimo .tc-check { font-size: 46px; line-height: 1; flex-shrink: 0; }
+.tc-ultimo .tc-nome { font-size: 30px; font-weight: 800; }
+.tc-ultimo .tc-meta { font-size: 15px; opacity: 0.92; margin-top: 2px; }
+.tc-ultimo .tc-hora { margin-left: auto; font-size: 28px; font-weight: 700; }
+
+.tc-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.tc-item {
+  background: var(--branco); border-radius: var(--raio); box-shadow: var(--sombra);
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+}
+.tc-item .log-avatar { width: 42px; height: 42px; font-size: 15px; }
+.tc-item .tc-nome-item { font-weight: 700; font-size: 15px; }
+.tc-item .tc-meta-item { font-size: 12px; color: var(--cinza-600); }
+.tc-item .tc-hora-item { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--azul-700); }
+.tc-vazio { text-align: center; padding: 60px 20px; color: var(--cinza-600); font-size: 16px; grid-column: 1/-1; }
+
+body.tc-fullscreen .topbar, body.tc-fullscreen .abas-nav { display: none; }
+body.tc-fullscreen .container { max-width: 100%; padding: 30px; }
+body.tc-fullscreen .tc-ultimo .tc-nome { font-size: 44px; }
+body.tc-fullscreen .tc-ultimo .tc-check { font-size: 64px; }
+body.tc-fullscreen .tc-ultimo .tc-hora { font-size: 38px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="marca-linha">
+    <div class="marca-icone">📚</div>
+    <div class="marca-texto">
+      <strong>Sistema de Frequência Escolar</strong>
+      <span id="nomeEscolaTopo">Escola Municipal Nossa Senhora Divina Pastora</span>
+    </div>
+  </div>
+  <div class="usuario">
+    <div class="relogio" id="relogioTopo">--:--</div>
+    <div id="dataTopo">--/--/----</div>
+  </div>
+</div>
+
+<nav class="abas-nav">
+  <div class="abas-inner">
+    <button class="aba-btn ativa" data-painel="dashboard" onclick="mudarAba('dashboard')">📊 Dashboard</button>
+    <button class="aba-btn" data-painel="alunos" onclick="mudarAba('alunos')">👥 Alunos</button>
+    <button class="aba-btn" data-painel="scanner" onclick="mudarAba('scanner')">📷 Scanner</button>
+    <button class="aba-btn" data-painel="justificativas" onclick="mudarAba('justificativas')">📝 Justificativas</button>
+    <button class="aba-btn" data-painel="relatorios" onclick="mudarAba('relatorios')">📅 Relatórios</button>
+    <button class="aba-btn" data-painel="confirmacao" onclick="mudarAba('confirmacao')">📺 Confirmação</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ======================= PAINEL: DASHBOARD ======================= -->
+  <div class="painel ativa" id="painel-dashboard">
+    <div id="avisoDashboard"></div>
+
+    <div class="grid grid-4">
+      <div class="card kpi"><div class="valor" id="kpiTotalAlunos">–</div><div class="rotulo">Total de Alunos</div></div>
+      <div class="card kpi kpi-verde"><div class="valor" id="kpiPresentesHoje">–</div><div class="rotulo">Presentes Hoje</div></div>
+      <div class="card kpi kpi-vermelho"><div class="valor" id="kpiAusentesHoje">–</div><div class="rotulo">Ausentes Hoje</div></div>
+      <div class="card kpi kpi-laranja"><div class="valor" id="kpiPercPresenca">–</div><div class="rotulo">% Presença Hoje</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-cabecalho">
+        <h2>Frequência por Turma — <span id="dataDashboard">hoje</span></h2>
+        <button class="btn btn-secundario" onclick="carregarDashboard()">🔄 Atualizar</button>
+      </div>
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Turma</th><th>Total</th><th>Presentes</th><th>Ausentes</th><th>% Presença</th><th>Situação</th></tr></thead>
+          <tbody id="tbodyDashboardTurmas"><tr><td colspan="6" class="log-empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Presentes × Ausentes</h2>
+      <div id="graficoDashboardWrap"><canvas id="graficoDashboard" height="90"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ======================= PAINEL: ALUNOS ======================= -->
+  <div class="painel" id="painel-alunos">
+    <div class="card">
+      <div class="card-cabecalho">
+        <h2>Cadastro de Alunos</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secundario" onclick="abrirImportacaoAlunos()">📥 Importar em Massa</button>
+          <button class="btn btn-secundario" onclick="carregarAlunosPainel()">🔄 Recarregar</button>
+        </div>
+      </div>
+      <div class="filtro-linha">
+        <div>
+          <label>Buscar por nome ou matrícula</label>
+          <input type="text" id="filtroAlunoBusca" placeholder="Digite para buscar..." oninput="renderizarAlunosDebounced()">
+        </div>
+        <div>
+          <label>Turma</label>
+          <select id="filtroAlunoTurma" onchange="renderizarAlunos()"><option value="">Todas</option></select>
+        </div>
+        <div>
+          <label>Turno</label>
+          <select id="filtroAlunoTurno" onchange="renderizarAlunos()">
+            <option value="">Todos</option>
+            <option value="Matutino">Matutino</option>
+            <option value="Vespertino">Vespertino</option>
+            <option value="Noturno">Noturno</option>
+            <option value="Integral">Integral</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--cinza-600);margin:10px 0 0;" id="contadorAlunos"></p>
+    </div>
+
+    <div class="card" id="cardImportarAlunos" style="display:none;">
+      <h3>📥 Importação Rápida de Alunos</h3>
+      <p style="font-size:12px;color:var(--cinza-600);">
+        Cole uma linha por aluno. Campos separados por <b>ponto e vírgula</b> ou <b>tabulação</b>
+        (colar direto de uma célula do Excel/Sheets funciona):
+      </p>
+      <p style="background:var(--azul-50);padding:8px 10px;border-radius:6px;font-family:monospace;font-size:12px;">matrícula;nome;turma;turno;foto (opcional, link da imagem)</p>
+      <textarea id="txtImportarAlunos" rows="10" style="font-family:monospace;font-size:12px;" placeholder="12345;Maria Silva;EFAFINT8A;Matutino"></textarea>
+      <div id="avisoImportarAlunos"></div>
+      <div class="filtro-linha" style="margin-top:12px;">
+        <button class="btn btn-sucesso" style="flex:1" onclick="enviarImportacaoAlunos()">✓ Importar</button>
+        <button class="btn btn-secundario" style="flex:1" onclick="fecharImportacaoAlunos()">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Matrícula</th><th>Nome</th><th>Turma</th><th>Turno</th></tr></thead>
+          <tbody id="tbodyAlunos"><tr><td colspan="4" class="log-empty">Carregue os alunos para visualizar.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= PAINEL: SCANNER ======================= -->
+  <div class="painel" id="painel-scanner">
+    <div class="scanner-wrap">
+      <div class="card">
+        <h3>⚙️ Configuração do Registro</h3>
+        <label>Turno padrão</label>
+        <select id="turno">
+          <option value="Matutino">🌅 Matutino</option>
+          <option value="Vespertino">🌇 Vespertino</option>
+          <option value="Noturno">🌙 Noturno</option>
+          <option value="Integral">🕐 Integral</option>
+        </select>
+        <button class="btn btn-secundario btn-bloco" style="margin-top:8px" onclick="testarConexao()">🔗 Testar Conexão</button>
+        <div id="apiStatus"></div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card kpi"><div class="valor" id="statTotal">0</div><div class="rotulo">Registros Hoje</div><div style="font-size:11px;margin-top:4px;color:var(--cinza-600)" id="syncIndicator">–</div></div>
+        <div class="card kpi"><div class="valor" id="statData">--/--</div><div class="rotulo">Data</div></div>
+        <div class="card kpi kpi-laranja"><div class="valor" id="statHora" style="font-size:20px">00:00</div><div class="rotulo">Hora Atual</div></div>
+      </div>
+
+      <div id="feedback" class="aviso oculto"></div>
+
+      <div class="card">
+        <h3>📷 Leitor de QR Code</h3>
+        <div class="aviso aviso-info" id="avisoCarregar" style="display:none;">⚠️ Carregue os alunos (aba Alunos) antes de escanear, para validação em tempo real.</div>
+        <div id="reader"></div>
+        <button class="btn btn-sucesso btn-bloco" id="btnStart" onclick="startScanner()">▶ Iniciar Câmera</button>
+        <button class="btn btn-perigo btn-bloco oculto" id="btnStop" onclick="stopScanner()">⏹ Parar Câmera</button>
+        <div class="manual-row" style="margin-top:12px;">
+          <input type="text" id="manualId" placeholder="Digitar matrícula ou QR (MAT|NOME|TURMA)..." maxlength="120">
+          <button class="btn btn-secundario" onclick="registrarManual()">✓ OK</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-cabecalho">
+          <h3 style="margin:0">📋 Registros de Hoje</h3>
+          <span class="badge badge-azul" id="badgeCount">0</span>
+        </div>
+        <div id="logList"><div class="log-empty">Nenhum registro ainda.</div></div>
+        <div class="filtro-linha" style="margin-top:10px;">
+          <button class="btn btn-secundario" style="flex:1" onclick="exportarCSV()">⬇ CSV</button>
+          <button class="btn btn-secundario" style="flex:1" onclick="reenviarPendentes()">🔁 Reenviar</button>
+          <button class="btn btn-perigo" style="flex:1" onclick="limparLog()">🗑 Limpar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= PAINEL: JUSTIFICATIVAS ======================= -->
+  <div class="painel" id="painel-justificativas">
+    <div class="card">
+      <div class="card-cabecalho">
+        <h2>Ausentes do Dia</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="dataJustificativas" style="width:auto">
+          <button class="btn" onclick="carregarAusentesDoDia()">🔄 Carregar Ausentes</button>
+        </div>
+      </div>
+      <div id="avisoJustificativas"></div>
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Matrícula</th><th>Nome</th><th>Turma</th><th>Justificada?</th><th>Motivo</th><th>Ação</th></tr></thead>
+          <tbody id="tbodyAusentes"><tr><td colspan="6" class="log-empty">Selecione uma data e clique em "Carregar Ausentes".</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="cardFormularioJustificativa" style="display:none;">
+      <h3>Registrar Justificativa</h3>
+      <label>Aluno</label>
+      <input type="text" id="justAlunoLabel" disabled>
+      <input type="hidden" id="justMatricula">
+      <div class="grid grid-2">
+        <div>
+          <label>Motivo</label>
+          <select id="justMotivo">
+            <option>Atestado Médico</option>
+            <option>Problema de Saúde</option>
+            <option>Problema Familiar</option>
+            <option>Falta de Transporte</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div>
+          <label>Link do documento (opcional)</label>
+          <input type="url" id="justLink" placeholder="https://...">
+        </div>
+      </div>
+      <label>Descrição / observação</label>
+      <textarea id="justDescricao" placeholder="Detalhes da justificativa..."></textarea>
+      <div class="filtro-linha" style="margin-top:14px;">
+        <button class="btn btn-sucesso" style="flex:1" onclick="enviarJustificativa()">✓ Confirmar Justificativa</button>
+        <button class="btn btn-secundario" style="flex:1" onclick="fecharFormularioJustificativa()">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-cabecalho">
+        <h2>Histórico de Justificativas</h2>
+        <button class="btn btn-secundario" onclick="carregarHistoricoJustificativas()">🔄 Ver últimas 200</button>
+      </div>
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Data</th><th>Matrícula</th><th>Nome</th><th>Turma</th><th>Justificada?</th><th>Motivo</th></tr></thead>
+          <tbody id="tbodyHistoricoJust"><tr><td colspan="6" class="log-empty">Clique em "Ver últimas 200".</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= PAINEL: RELATÓRIOS ======================= -->
+  <div class="painel" id="painel-relatorios">
+    <div class="card">
+      <div class="card-cabecalho">
+        <h2>Relatório Mensal de Frequência</h2>
+      </div>
+      <div class="filtro-linha">
+        <div>
+          <label>Mês</label>
+          <select id="relatorioMes"></select>
+        </div>
+        <div>
+          <label>Ano</label>
+          <input type="number" id="relatorioAno" style="max-width:120px">
+        </div>
+        <div style="flex:0 0 auto;">
+          <button class="btn" onclick="carregarRelatorioMensal()">📊 Gerar Relatório</button>
+        </div>
+        <div style="flex:0 0 auto;">
+          <button class="btn btn-secundario" onclick="exportarRelatorioCSV()">⬇ CSV</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--cinza-600);margin-top:10px;" id="infoRelatorio"></p>
+    </div>
+
+    <div class="card">
+      <h3>Média de Frequência por Turma</h3>
+      <div id="resumoTurmasRelatorio" class="grid grid-3"></div>
+    </div>
+
+    <div class="card">
+      <div class="filtro-linha" style="margin-bottom:12px;">
+        <div>
+          <label>Buscar aluno</label>
+          <input type="text" id="filtroRelatorioBusca" oninput="renderizarRelatorioMensalDebounced()" placeholder="Nome ou matrícula...">
+        </div>
+        <div>
+          <label>Situação</label>
+          <select id="filtroRelatorioSituacao" onchange="renderizarRelatorioMensal()">
+            <option value="">Todas</option>
+            <option value="regular">🟢 Regular</option>
+            <option value="atencao">🟡 Atenção</option>
+            <option value="critico">🔴 Crítico</option>
+          </select>
+        </div>
+      </div>
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Aluno</th><th>Turma</th><th>Presenças</th><th>Justif.</th><th>Faltas</th><th>% Freq.</th><th>Situação</th></tr></thead>
+          <tbody id="tbodyRelatorioMensal"><tr><td colspan="7" class="log-empty">Clique em "Gerar Relatório".</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- ======================= PAINEL: CONFIRMAÇÃO EM TELA ======================= -->
+  <div class="painel" id="painel-confirmacao">
+    <div class="tela-confirmacao">
+      <div class="tc-topo">
+        <div>
+          <h1 style="margin:0;font-size:26px;">✅ Confirmação de Presença</h1>
+          <div id="tcData" style="color:var(--cinza-600);font-size:14px;">—</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="tc-total"><span id="tcTotalHoje">0</span><small>registrados hoje</small></div>
+          <div class="tc-relogio" id="tcRelogio">--:--:--</div>
+          <button class="btn btn-secundario" onclick="alternarTelaCheia()" title="Tela cheia">⛶</button>
+        </div>
+      </div>
+      <div id="tcUltimo" class="tc-ultimo oculto"></div>
+      <div id="tcLista" class="tc-lista"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIGURAÇÃO / CONSTANTES
+// ═══════════════════════════════════════════════════════════
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyc1jwab7Fv1C4hzhwHVDWyZhnV8KrbBskaTvJuxWjHuGmQARIzlX1WSh6Zr_iAem_gNQ/exec";
+function getUrl() { return SCRIPT_URL; }
+function urlValida(url) { return url && url.startsWith('https://script.google.com'); }
+
+function jsonpRequest(url, params, timeout) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    params = Object.assign({}, params, { callback: cbName });
+    const script = document.createElement('script');
+    script.src = url + '?' + new URLSearchParams(params).toString();
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, timeout || 15000);
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function (data) { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
+    document.head.appendChild(script);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVEGAÇÃO ENTRE ABAS
+// ═══════════════════════════════════════════════════════════
+const carregadoUmaVez = {};
+function mudarAba(nome) {
+  document.querySelectorAll('.aba-btn').forEach(b => b.classList.toggle('ativa', b.dataset.painel === nome));
+  document.querySelectorAll('.painel').forEach(p => p.classList.toggle('ativa', p.id === 'painel-' + nome));
+  if (nome === 'confirmacao') { iniciarConfirmacao(); } else { pararConfirmacao(); }
+  if (nome === 'dashboard') { carregarDashboard(); return; } // sempre atualiza ao entrar (pega registros novos do Scanner)
+  if (!carregadoUmaVez[nome]) {
+    carregadoUmaVez[nome] = true;
+    if (nome === 'alunos') carregarAlunosPainel();
+    if (nome === 'relatorios') inicializarRelatorio();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELÓGIO DO TOPO
+// ═══════════════════════════════════════════════════════════
+function atualizarRelogioTopo() {
+  const agora = new Date();
+  document.getElementById('relogioTopo').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('dataTopo').textContent = agora.toLocaleDateString('pt-BR');
+}
+setInterval(atualizarRelogioTopo, 1000);
+atualizarRelogioTopo();
+
+function badgeSituacao(situacao) {
+  const mapa = {
+    normal:   ['badge-verde', '🟢 Normal'],
+    regular:  ['badge-verde', '🟢 Regular'],
+    atencao:  ['badge-amarelo', '🟡 Atenção'],
+    critico:  ['badge-vermelho', '🔴 Crítico'],
+    '-':      ['badge-cinza', '—'],
+  };
+  const [cls, texto] = mapa[situacao] || ['badge-cinza', situacao || '—'];
+  return `<span class="badge ${cls}">${texto}</span>`;
+}
+function fmtPerc(v) { return (v * 100).toFixed(1) + '%'; }
+
+// ═══════════════════════════════════════════════════════════
+// 📊 DASHBOARD
+// ═══════════════════════════════════════════════════════════
+let graficoDashboardChart = null;
+async function carregarDashboard() {
+  document.getElementById('avisoDashboard').innerHTML = '<div class="aviso aviso-info"><span class="spinner"></span>Carregando dashboard...</div>';
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'obterDashboard' }, 20000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro desconhecido');
+    document.getElementById('avisoDashboard').innerHTML = '';
+    document.getElementById('dataDashboard').textContent = data.data;
+    document.getElementById('kpiTotalAlunos').textContent = data.totalAlunos;
+    document.getElementById('kpiPresentesHoje').textContent = data.presentesHoje;
+    document.getElementById('kpiAusentesHoje').textContent = data.ausentesHoje;
+    document.getElementById('kpiPercPresenca').textContent = fmtPerc(data.percPresenca);
+
+    const tbody = document.getElementById('tbodyDashboardTurmas');
+    if (!data.porTurma.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="log-empty">Nenhuma turma cadastrada.</td></tr>';
+    } else {
+      tbody.innerHTML = data.porTurma.map(t => `
+        <tr>
+          <td><strong>${t.turma}</strong></td>
+          <td>${t.total}</td>
+          <td>${t.presentes}</td>
+          <td>${t.ausentes}</td>
+          <td>${fmtPerc(t.perc)}</td>
+          <td>${badgeSituacao(t.situacao)}</td>
+        </tr>`).join('');
+    }
+
+    renderizarGraficoDashboard(data.porTurma);
+  } catch (err) {
+    document.getElementById('avisoDashboard').innerHTML = `<div class="aviso aviso-erro">❌ ${err.message}</div>`;
+  }
+}
+function renderizarGraficoDashboard(porTurma) {
+  const wrap = document.getElementById('graficoDashboardWrap');
+  if (typeof Chart === 'undefined') {
+    wrap.innerHTML = '<p style="font-size:13px;color:var(--cinza-600);text-align:center;padding:20px 0;">📉 O gráfico não pôde ser carregado (biblioteca bloqueada pela rede). Os números acima e a tabela continuam funcionando normalmente.</p>';
+    return;
+  }
+  try {
+    if (!document.getElementById('graficoDashboard')) wrap.innerHTML = '<canvas id="graficoDashboard" height="90"></canvas>';
+    const ctx = document.getElementById('graficoDashboard');
+    const labels = porTurma.map(t => t.turma);
+    const presentes = porTurma.map(t => t.presentes);
+    const ausentes = porTurma.map(t => t.ausentes);
+    if (graficoDashboardChart) graficoDashboardChart.destroy();
+    graficoDashboardChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels.length ? labels : ['Sem dados'],
+        datasets: [
+          { label: 'Presentes', data: presentes, backgroundColor: '#16a34a' },
+          { label: 'Ausentes', data: ausentes, backgroundColor: '#dc2626' },
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  } catch (err) {
+    wrap.innerHTML = `<p style="font-size:13px;color:var(--cinza-600);text-align:center;padding:20px 0;">📉 Não foi possível desenhar o gráfico (${err.message}). Os números acima continuam corretos.</p>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 👥 ALUNOS (painel de consulta)
+// ═══════════════════════════════════════════════════════════
+let listaAlunosPainel = [];
+async function carregarAlunosPainel() {
+  document.getElementById('contadorAlunos').textContent = 'Carregando...';
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'listarAlunos' }, 20000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro ao carregar alunos');
+    listaAlunosPainel = data.alunos || [];
+    const selTurma = document.getElementById('filtroAlunoTurma');
+    const turmas = Array.from(new Set(listaAlunosPainel.map(a => a.turma).filter(Boolean))).sort();
+    selTurma.innerHTML = '<option value="">Todas</option>' + turmas.map(t => `<option value="${t}">${t}</option>`).join('');
+    renderizarAlunos();
+    // também alimenta o banco local do scanner
+    alunosDB = {};
+    listaAlunosPainel.forEach(a => { alunosDB[normalizarMat(a.matricula)] = { nome: a.nome, turma: a.turma, turno: a.turno }; });
+    alunosCarregados = true;
+    document.getElementById('avisoCarregar').style.display = 'none';
+  } catch (err) {
+    document.getElementById('contadorAlunos').textContent = '';
+    document.getElementById('tbodyAlunos').innerHTML = `<tr><td colspan="4" class="log-empty">❌ ${err.message}</td></tr>`;
+  }
+}
+function debounce(fn, esperaMs) {
+  let timer = null;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), esperaMs);
+  };
+}
+
+function renderizarAlunos() {
+  const busca = (document.getElementById('filtroAlunoBusca').value || '').toLowerCase();
+  const turma = document.getElementById('filtroAlunoTurma').value;
+  const turno = document.getElementById('filtroAlunoTurno').value;
+  const filtrados = listaAlunosPainel.filter(a =>
+    (!busca || a.nome.toLowerCase().includes(busca) || a.matricula.includes(busca)) &&
+    (!turma || a.turma === turma) &&
+    (!turno || a.turno === turno)
+  );
+  document.getElementById('contadorAlunos').textContent = `${filtrados.length} de ${listaAlunosPainel.length} aluno(s) ativo(s)`;
+  const tbody = document.getElementById('tbodyAlunos');
+  tbody.innerHTML = filtrados.length
+    ? filtrados.slice(0, 500).map(a => `<tr><td>${a.matricula}</td><td>${a.nome}</td><td>${a.turma || '—'}</td><td>${a.turno || '—'}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="log-empty">Nenhum aluno encontrado.</td></tr>';
+}
+const renderizarAlunosDebounced = debounce(renderizarAlunos, 200);
+
+function abrirImportacaoAlunos() {
+  document.getElementById('cardImportarAlunos').style.display = 'block';
+  document.getElementById('avisoImportarAlunos').innerHTML = '';
+  document.getElementById('cardImportarAlunos').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function fecharImportacaoAlunos() {
+  document.getElementById('cardImportarAlunos').style.display = 'none';
+  document.getElementById('txtImportarAlunos').value = '';
+  document.getElementById('avisoImportarAlunos').innerHTML = '';
+}
+async function enviarImportacaoAlunos() {
+  const bruto = document.getElementById('txtImportarAlunos').value;
+  const linhas = bruto.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!linhas.length) {
+    document.getElementById('avisoImportarAlunos').innerHTML = '<div class="aviso aviso-erro">Cole ao menos uma linha antes de importar.</div>';
+    return;
+  }
+  const alunos = linhas.map(l => {
+    const p = l.split(/\t|;/).map(s => s.trim());
+    return { matricula: p[0] || '', nome: p[1] || '', turma: p[2] || '', turno: p[3] || '', foto: p[4] || '' };
+  });
+
+  // Envia em lotes de 60 alunos por vez — uma lista muito grande numa
+  // única URL de GET/JSONP correria risco de estourar o limite de
+  // tamanho de URL (o registro em si já é feito em lote no backend,
+  // isso aqui só limita o tamanho de CADA requisição).
+  const TAMANHO_LOTE = 60;
+  const lotes = [];
+  for (let i = 0; i < alunos.length; i += TAMANHO_LOTE) lotes.push(alunos.slice(i, i + TAMANHO_LOTE));
+
+  let totalImportados = 0, totalIgnorados = 0;
+  for (let i = 0; i < lotes.length; i++) {
+    document.getElementById('avisoImportarAlunos').innerHTML =
+      `<div class="aviso aviso-info"><span class="spinner"></span>Importando lote ${i + 1} de ${lotes.length} (${lotes[i].length} aluno(s))...</div>`;
+    try {
+      const data = await jsonpRequest(getUrl(), { action: 'importarAlunosLote', alunos: JSON.stringify(lotes[i]) }, 30000);
+      if (data.status !== 'ok') throw new Error(data.message || 'Erro ao importar');
+      totalImportados += data.importados || 0;
+      totalIgnorados += data.ignorados || 0;
+    } catch (err) {
+      document.getElementById('avisoImportarAlunos').innerHTML =
+        `<div class="aviso aviso-erro">❌ Parou no lote ${i + 1}: ${err.message}<br>Já importados até aqui: ${totalImportados}.</div>`;
+      carregarAlunosPainel();
+      return;
+    }
+  }
+  document.getElementById('avisoImportarAlunos').innerHTML =
+    `<div class="aviso aviso-ok">✅ ${totalImportados} importado(s), ${totalIgnorados} ignorado(s) (matrícula/nome em branco ou já cadastrados).</div>`;
+  document.getElementById('txtImportarAlunos').value = '';
+  carregarAlunosPainel(); // recarrega a lista já com os novos alunos
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📷 SCANNER (mesma lógica comprovada do app original)
+// ═══════════════════════════════════════════════════════════
+function normalizarMat(v) {
+  const n = parseInt(String(v).trim(), 10);
+  return isNaN(n) ? String(v).trim() : String(n).padStart(12, '0');
+}
+function parsearQR(texto) {
+  const txt = (texto || '').trim();
+  const partes = txt.split('|');
+  if (partes.length >= 3) return { matricula: normalizarMat(partes[0]), nome: partes[1].trim(), turma: partes[2].trim() };
+  return { matricula: normalizarMat(txt), nome: '', turma: '' };
+}
+
+let scanner = null, isScanning = false, lastScan = '', lastScanTime = 0;
+const COOLDOWN_MS = 2800;
+let alunosDB = {}, alunosCarregados = false;
+const hojeStr = new Date().toLocaleDateString('pt-BR');
+
+function salvarRegistrosLocal() {
+  try { localStorage.setItem('freq_registros', JSON.stringify({ data: hojeStr, registros: registrosHoje })); } catch (e) {}
+}
+function carregarRegistrosLocal() {
+  try {
+    const raw = localStorage.getItem('freq_registros');
+    if (!raw) return [];
+    const dados = JSON.parse(raw);
+    if (dados.data === hojeStr) return dados.registros || [];
+    localStorage.removeItem('freq_registros');
+    return [];
+  } catch (e) { return []; }
+}
+let registrosHoje = carregarRegistrosLocal();
+
+function atualizarRelogioScanner() {
+  const agora = new Date();
+  document.getElementById('statHora').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('statData').textContent = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+setInterval(atualizarRelogioScanner, 1000);
+atualizarRelogioScanner();
+
+async function testarConexao() {
+  mostrarStatus('aviso-info', '<span class="spinner"></span>Testando conexão...');
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'ping' });
+    if (data.status === 'ok') mostrarStatus('aviso-ok', `✅ Script online! (${data.versao || 'v?'})`);
+    else throw new Error(data.message || 'Resposta inesperada');
+  } catch (err) {
+    mostrarStatus('aviso-erro', `❌ Erro: ${err.message}`);
+  }
+}
+function mostrarStatus(classe, html) {
+  const el = document.getElementById('apiStatus');
+  el.innerHTML = `<div class="aviso ${classe}">${html}</div>`;
+}
+
+function startScanner() {
+  if (!alunosCarregados) document.getElementById('avisoCarregar').style.display = 'block';
+  if (isScanning) return;
+  document.getElementById('btnStart').classList.add('oculto');
+  document.getElementById('btnStop').classList.remove('oculto');
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 230, height: 230 } }, onScanSuccess, () => {})
+    .then(() => { isScanning = true; })
+    .catch(() => {
+      showFeedback('aviso-erro', '⚠️ Câmera indisponível — verifique as permissões do navegador.');
+      document.getElementById('btnStart').classList.remove('oculto');
+      document.getElementById('btnStop').classList.add('oculto');
+    });
+}
+function stopScanner() {
+  if (scanner && isScanning) {
+    scanner.stop().then(() => {
+      isScanning = false;
+      document.getElementById('btnStart').classList.remove('oculto');
+      document.getElementById('btnStop').classList.add('oculto');
+    });
+  }
+}
+function onScanSuccess(decodedText) {
+  const agora = Date.now();
+  if (decodedText === lastScan && agora - lastScanTime < COOLDOWN_MS) return;
+  lastScan = decodedText; lastScanTime = agora;
+  processarQR(decodedText.trim());
+}
+function registrarManual() {
+  const val = document.getElementById('manualId').value.trim();
+  if (!val) return;
+  processarQR(val);
+  document.getElementById('manualId').value = '';
+}
+async function processarQR(textoQR) {
+  const agora = new Date();
+  const hora = agora.toLocaleTimeString('pt-BR');
+  const data = agora.toLocaleDateString('pt-BR');
+  const turno = document.getElementById('turno').value;
+  const parsed = parsearQR(textoQR);
+  const matricula = parsed.matricula;
+  if (!matricula) { showFeedback('aviso-erro', `❌ QR inválido — não foi possível ler a matrícula de "${textoQR}"`); return; }
+
+  const jaRegistrado = registrosHoje.find(r => r.matricula === matricula && r.data === data);
+  if (jaRegistrado) {
+    showFeedback('aviso-info', `⚠️ Já registrado hoje! ${jaRegistrado.nome || matricula} · Entrada: ${jaRegistrado.hora}`);
+    vibrar([100, 50, 100]);
+    return;
+  }
+  let nome = parsed.nome, turma = parsed.turma, turnoAluno = turno;
+  const dadosBD = alunosDB[matricula];
+  if (dadosBD) { nome = nome || dadosBD.nome; turma = turma || dadosBD.turma; turnoAluno = dadosBD.turno || turno; }
+  if (!nome && alunosCarregados) {
+    showFeedback('aviso-erro', `❌ Matrícula "${matricula}" não está cadastrada.`);
+    vibrar([200, 100, 200]);
+    return;
+  }
+  nome = nome || `Matrícula ${matricula}`;
+  turma = turma || '—';
+
+  const registro = { matricula, nome, turma, data, hora, turno: turnoAluno, status: 'Presente', via: 'QR Code', syncStatus: 'pendente' };
+  registrosHoje.unshift(registro);
+  salvarRegistrosLocal();
+  renderizarLog();
+  atualizarStats();
+  showFeedback('aviso-ok', `✅ ${nome} — Turma: ${turma} · ${hora} · ${turnoAluno}`);
+  vibrar([200]);
+  tcNotificarRegistroLocal(registro);
+  await enviarParaSheets(registro);
+}
+
+const OUTBOX_KEY = 'outbox_v4';
+const BATCH_MAX = 50; // v4.9: era 25 — menos requisições separadas ao recuperar uma fila acumulada
+let backoffMs = 0, flushTimer = null, flushInFlight = false;
+function outboxLer() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (_) { return []; } }
+function outboxSalvar(fila) { localStorage.setItem(OUTBOX_KEY, JSON.stringify(fila)); }
+function outboxAdicionar(registro) {
+  const fila = outboxLer();
+  fila.push({ id: registro.id, matricula: registro.matricula, nome: registro.nome, turma: registro.turma, data: registro.data, hora: registro.hora, turno: registro.turno, status: registro.status, via: registro.via });
+  outboxSalvar(fila);
+}
+function outboxRemoverIds(ids) { const set = new Set(ids); outboxSalvar(outboxLer().filter(r => !set.has(r.id))); }
+function marcarRegistros(ids, syncStatus) {
+  const set = new Set(ids); let mudou = false;
+  registrosHoje.forEach(r => { const id = r.matricula + '_' + r.data + '_' + r.hora; if (set.has(id)) { r.syncStatus = syncStatus; mudou = true; } });
+  if (mudou) { salvarRegistrosLocal(); renderizarLog(); }
+}
+async function enviarParaSheets(registro) {
+  registro.id = registro.matricula + '_' + registro.data + '_' + registro.hora;
+  registro.syncStatus = 'pendente';
+  outboxAdicionar(registro);
+  salvarRegistrosLocal();
+  renderizarLog();
+  agendarFlush(Math.floor(Math.random() * 300)); // pequeno jitter: evita que vários aparelhos batam no servidor no mesmo instante exato
+}
+function agendarFlush(delayMs) {
+  if (flushTimer) return;
+  flushTimer = setTimeout(async () => { flushTimer = null; await flushOutbox(); }, Math.max(0, delayMs != null ? delayMs : 800));
+}
+async function flushOutbox() {
+  if (flushInFlight) return;
+  const fila = outboxLer();
+  if (fila.length === 0) { setSyncStatus('synced'); return; }
+  flushInFlight = true;
+  setSyncStatus('syncing');
+  const lote = fila.slice(0, BATCH_MAX);
+  const ids = lote.map(r => r.id);
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'registrarPresencaBatch', registros: JSON.stringify(lote) }, 20000);
+    if (data && data.status === 'ok') {
+      outboxRemoverIds(ids); marcarRegistros(ids, 'ok'); backoffMs = 0; setSyncStatus('synced');
+      if (document.getElementById('painel-dashboard').classList.contains('ativa')) carregarDashboard();
+      if (outboxLer().length > 0) agendarFlush(50);
+    } else throw new Error((data && (data.message || data.mensagem)) || 'Resposta inválida');
+  } catch (err) {
+    marcarRegistros(ids, 'erro'); setSyncStatus('fail');
+    backoffMs = Math.min(30000, (backoffMs || 1000) * 2);
+    agendarFlush(backoffMs + Math.floor(Math.random() * 1200)); // v4.9: jitter maior (era 500ms) — espalha melhor os retries de vários aparelhos em pico
+  } finally { flushInFlight = false; }
+}
+async function reenviarPendentes() {
+  const pendentes = registrosHoje.filter(r => r.syncStatus === 'pendente' || r.syncStatus === 'erro');
+  const fila = outboxLer(); const filaIds = new Set(fila.map(r => r.id));
+  pendentes.forEach(r => { const id = r.matricula + '_' + r.data + '_' + r.hora; if (!filaIds.has(id)) outboxAdicionar(Object.assign({}, r, { id })); });
+  if (outboxLer().length === 0) { showFeedback('aviso-ok', '✅ Tudo sincronizado! Nenhum registro pendente.'); return; }
+  showFeedback('aviso-ok', `🔁 Reenviando ${outboxLer().length} registro(s)...`);
+  backoffMs = 0; agendarFlush(0);
+}
+setInterval(() => { if (outboxLer().length > 0) agendarFlush(0); }, 15000);
+
+function setSyncStatus(estado) {
+  const el = document.getElementById('syncIndicator');
+  const textos = { syncing: '⏳ Sincronizando...', synced: '✅ Sincronizado', fail: '⚠️ Falha de sync' };
+  el.textContent = textos[estado] || '–';
+}
+function showFeedback(classe, texto) {
+  const el = document.getElementById('feedback');
+  el.className = `aviso ${classe}`;
+  el.textContent = texto;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = 'aviso oculto'; }, 4500);
+}
+function vibrar(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
+function renderizarLog() {
+  const container = document.getElementById('logList');
+  if (registrosHoje.length === 0) { container.innerHTML = '<div class="log-empty">Nenhum registro ainda. Inicie a câmera e escaneie!</div>'; return; }
+  const syncIcons = { ok: '☁️', pendente: '⏳', erro: '⚠️' };
+  container.innerHTML = registrosHoje.slice(0, 60).map(r => {
+    const ini = (r.nome || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+    const cls = r.syncStatus === 'ok' ? '' : r.syncStatus === 'erro' ? ' erro' : ' pendente';
+    return `<div class="log-item${cls}">
+      <div class="log-avatar">${ini}</div>
+      <div><div class="log-name">${r.nome}</div><div class="log-meta">Turma ${r.turma} · Mat. ${r.matricula}</div></div>
+      <div class="log-time">${r.hora}<br><small>${syncIcons[r.syncStatus] || '⏳'}</small></div>
+    </div>`;
+  }).join('');
+}
+function atualizarStats() {
+  document.getElementById('statTotal').textContent = registrosHoje.length;
+  document.getElementById('badgeCount').textContent = registrosHoje.length;
+}
+function limparLog() {
+  if (!confirm('Apagar todos os registros locais de hoje?')) return;
+  registrosHoje = []; salvarRegistrosLocal(); renderizarLog(); atualizarStats(); setSyncStatus('');
+}
+function exportarCSV() {
+  if (registrosHoje.length === 0) { alert('Nenhum registro para exportar.'); return; }
+  const header = 'Matrícula,Nome,Turma,Data,Hora,Turno,Status,Via,Sincronizado\n';
+  const rows = registrosHoje.map(r => `"${r.matricula}","${r.nome}","${r.turma}","${r.data}","${r.hora}","${r.turno}","${r.status}","${r.via}","${r.syncStatus}"`).join('\n');
+  baixarCSV(header + rows, `frequencia_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`);
+}
+function baixarCSV(conteudo, nomeArquivo) {
+  const blob = new Blob(['\uFEFF' + conteudo], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = nomeArquivo; a.click();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('manualId').addEventListener('keydown', e => { if (e.key === 'Enter') registrarManual(); });
+
+// ═══════════════════════════════════════════════════════════
+// 📝 JUSTIFICATIVAS
+// ═══════════════════════════════════════════════════════════
+document.getElementById('dataJustificativas').valueAsDate = new Date();
+let ultimosAusentes = [];
+
+async function carregarAusentesDoDia() {
+  const dataInput = document.getElementById('dataJustificativas').value;
+  const dataBR = dataInput ? dataInput.split('-').reverse().join('/') : '';
+  document.getElementById('avisoJustificativas').innerHTML = '<div class="aviso aviso-info"><span class="spinner"></span>Carregando ausentes...</div>';
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'obterAusentesDoDia', data: dataBR }, 25000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro ao carregar ausentes');
+    ultimosAusentes = data.ausentes || [];
+    document.getElementById('avisoJustificativas').innerHTML = `<div class="aviso aviso-ok">✅ ${data.total} ausente(s) em ${data.data}.</div>`;
+    renderizarAusentes();
+  } catch (err) {
+    document.getElementById('avisoJustificativas').innerHTML = `<div class="aviso aviso-erro">❌ ${err.message}</div>`;
+  }
+}
+function renderizarAusentes() {
+  const tbody = document.getElementById('tbodyAusentes');
+  tbody.innerHTML = ultimosAusentes.length ? ultimosAusentes.map(a => {
+    const justBadge = a.justificada === 'Sim' ? badgeSituacao('regular') : badgeSituacao('critico');
+    return `<tr>
+      <td>${a.matricula}</td><td>${a.nome}</td><td>${a.turma || '—'}</td>
+      <td>${justBadge}</td><td>${a.motivo || '—'}</td>
+      <td><button class="btn btn-secundario" onclick="abrirFormularioJustificativa('${a.matricula}','${(a.nome || '').replace(/'/g, "\\'")}')">Justificar</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="log-empty">Nenhum ausente encontrado para esta data.</td></tr>';
+}
+function abrirFormularioJustificativa(matricula, nome) {
+  document.getElementById('justMatricula').value = matricula;
+  document.getElementById('justAlunoLabel').value = `${nome} (Mat. ${matricula})`;
+  document.getElementById('cardFormularioJustificativa').style.display = 'block';
+  document.getElementById('cardFormularioJustificativa').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function fecharFormularioJustificativa() {
+  document.getElementById('cardFormularioJustificativa').style.display = 'none';
+  document.getElementById('justDescricao').value = '';
+  document.getElementById('justLink').value = '';
+}
+async function enviarJustificativa() {
+  const matricula = document.getElementById('justMatricula').value;
+  const motivo = document.getElementById('justMotivo').value;
+  const descricao = document.getElementById('justDescricao').value;
+  const link = document.getElementById('justLink').value;
+  const dataInput = document.getElementById('dataJustificativas').value;
+  const dataBR = dataInput ? dataInput.split('-').reverse().join('/') : '';
+  try {
+    const data = await jsonpRequest(getUrl(), {
+      action: 'registrarJustificativa', matricula, motivo, descricao,
+      linkDocumento: link, data: dataBR, registradoPor: 'Painel Web',
+    }, 20000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro ao registrar');
+    fecharFormularioJustificativa();
+    showFeedbackGlobal('✅ Justificativa registrada com sucesso.');
+    carregarAusentesDoDia();
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+}
+function showFeedbackGlobal(msg) {
+  document.getElementById('avisoJustificativas').innerHTML = `<div class="aviso aviso-ok">${msg}</div>`;
+}
+async function carregarHistoricoJustificativas() {
+  const tbody = document.getElementById('tbodyHistoricoJust');
+  tbody.innerHTML = '<tr><td colspan="6" class="log-empty"><span class="spinner"></span>Carregando...</td></tr>';
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'listarJustificativas', limite: 200 }, 25000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro ao listar justificativas');
+    tbody.innerHTML = data.justificativas.length ? data.justificativas.map(j => `
+      <tr><td>${j.data}</td><td>${j.matricula}</td><td>${j.nome || '—'}</td><td>${j.turma || '—'}</td>
+      <td>${j.justificada === 'Sim' ? badgeSituacao('regular') : badgeSituacao('critico')}</td><td>${j.motivo || '—'}</td></tr>
+    `).join('') : '<tr><td colspan="6" class="log-empty">Nenhuma justificativa registrada.</td></tr>';
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="log-empty">❌ ${err.message}</td></tr>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📅 RELATÓRIOS
+// ═══════════════════════════════════════════════════════════
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let relatorioAlunos = [];
+function inicializarRelatorio() {
+  const hoje = new Date();
+  const selMes = document.getElementById('relatorioMes');
+  selMes.innerHTML = MESES_PT.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+  selMes.value = hoje.getMonth() + 1;
+  document.getElementById('relatorioAno').value = hoje.getFullYear();
+}
+async function carregarRelatorioMensal() {
+  const mes = document.getElementById('relatorioMes').value;
+  const ano = document.getElementById('relatorioAno').value;
+  document.getElementById('infoRelatorio').innerHTML = '<span class="spinner"></span>Gerando relatório...';
+  document.getElementById('resumoTurmasRelatorio').innerHTML = '';
+  document.getElementById('tbodyRelatorioMensal').innerHTML = '<tr><td colspan="7" class="log-empty">Carregando...</td></tr>';
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'obterRelatorioMensal', mes, ano }, 30000);
+    if (data.status !== 'ok') throw new Error(data.message || 'Erro ao gerar relatório');
+    relatorioAlunos = data.alunos || [];
+    document.getElementById('infoRelatorio').textContent =
+      `${MESES_PT[data.mes - 1]}/${data.ano} · ${data.diasPercorridos} dia(s) letivo(s) percorrido(s) · ${relatorioAlunos.length} aluno(s)`;
+
+    document.getElementById('resumoTurmasRelatorio').innerHTML = (data.porTurma || []).map(t => `
+      <div class="card kpi">
+        <div class="valor" style="font-size:22px">${fmtPerc(t.mediaPerc)}</div>
+        <div class="rotulo">${t.turma} (${t.alunos} alunos)</div>
+      </div>`).join('') || '<p style="color:var(--cinza-600);font-size:13px;">Sem dados de turma.</p>';
+
+    renderizarRelatorioMensal();
+  } catch (err) {
+    document.getElementById('infoRelatorio').textContent = '';
+    document.getElementById('tbodyRelatorioMensal').innerHTML = `<tr><td colspan="7" class="log-empty">❌ ${err.message}</td></tr>`;
+  }
+}
+function renderizarRelatorioMensal() {
+  const busca = (document.getElementById('filtroRelatorioBusca').value || '').toLowerCase();
+  const situacao = document.getElementById('filtroRelatorioSituacao').value;
+  const filtrados = relatorioAlunos.filter(a =>
+    (!busca || a.nome.toLowerCase().includes(busca) || a.matricula.includes(busca)) &&
+    (!situacao || a.situacao === situacao)
+  );
+  const tbody = document.getElementById('tbodyRelatorioMensal');
+  tbody.innerHTML = filtrados.length ? filtrados.map(a => `
+    <tr>
+      <td>${a.nome}<br><small style="color:var(--cinza-600)">Mat. ${a.matricula}</small></td>
+      <td>${a.turma || '—'}</td>
+      <td>${a.presencas}</td>
+      <td>${a.justificadas}</td>
+      <td>${a.faltas}</td>
+      <td>${fmtPerc(a.percComJust)}</td>
+      <td>${badgeSituacao(a.situacao)}</td>
+    </tr>`).join('') : '<tr><td colspan="7" class="log-empty">Nenhum aluno encontrado.</td></tr>';
+}
+const renderizarRelatorioMensalDebounced = debounce(renderizarRelatorioMensal, 200);
+function exportarRelatorioCSV() {
+  if (!relatorioAlunos.length) { alert('Gere o relatório antes de exportar.'); return; }
+  const header = 'Matrícula,Nome,Turma,Presenças,Justificadas,Faltas,% Freq. c/ justificativa,% Freq. s/ justificativa,Situação\n';
+  const rows = relatorioAlunos.map(a =>
+    `"${a.matricula}","${a.nome}","${a.turma}",${a.presencas},${a.justificadas},${a.faltas},${(a.percComJust*100).toFixed(1)}%,${(a.percSemJust*100).toFixed(1)}%,"${a.situacao}"`
+  ).join('\n');
+  const mes = document.getElementById('relatorioMes').value, ano = document.getElementById('relatorioAno').value;
+  baixarCSV(header + rows, `relatorio_frequencia_${ano}-${String(mes).padStart(2,'0')}.csv`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📺 CONFIRMAÇÃO EM TELA (tempo real)
+// ═══════════════════════════════════════════════════════════
+let tcRegistros = [];       // registros já exibidos hoje (mais recente primeiro)
+let tcMatriculasVistas = new Set();
+let tcUltimoTimestamp = null;
+let tcTimer = null;
+
+function iniciarConfirmacao() {
+  document.getElementById('tcData').textContent = new Date().toLocaleDateString('pt-BR');
+  carregarConfirmacao(true);
+  if (tcTimer) clearInterval(tcTimer);
+  tcTimer = setInterval(() => carregarConfirmacao(false), 4000); // busca no servidor a cada 4s
+}
+function pararConfirmacao() {
+  if (tcTimer) { clearInterval(tcTimer); tcTimer = null; }
+}
+async function carregarConfirmacao(primeiraVez) {
+  try {
+    const params = { action: 'listarFrequenciaDoDia' };
+    // Depois da primeira carga, só pede o que aconteceu depois do último
+    // registro já visto — a resposta fica pequena mesmo com centenas de
+    // alunos já confirmados no dia, e a planilha processa bem menos dado
+    // a cada ciclo de 4s.
+    if (!primeiraVez && tcUltimoTimestamp) params.desde = tcUltimoTimestamp;
+    const data = await jsonpRequest(getUrl(), params, 15000);
+    if (data.status !== 'ok') return;
+    tcTotalDeHoje = data.total || 0;
+    const registros = data.registros || []; // mais recente primeiro
+    if (registros.length) {
+      const maisRecente = registros[0].timestamp;
+      if (maisRecente && (!tcUltimoTimestamp || maisRecente > tcUltimoTimestamp)) tcUltimoTimestamp = maisRecente;
+      registros.slice().reverse().forEach(r => tcRegistroNovo(r, !primeiraVez)); // ordem cronológica ao inserir
+    } else if (primeiraVez) {
+      renderizarListaConfirmacao();
+    }
+    document.getElementById('tcTotalHoje').textContent = tcTotalDeHoje;
+  } catch (err) { /* falha silenciosa — tenta de novo no próximo ciclo */ }
+}
+let tcTotalDeHoje = 0;
+function tcRegistroNovo(r, destacar) {
+  const chave = r.matricula + '_' + r.hora;
+  if (tcMatriculasVistas.has(chave)) return;
+  tcMatriculasVistas.add(chave);
+  tcRegistros.unshift(r);
+  tcRegistros = tcRegistros.slice(0, 60);
+  renderizarListaConfirmacao();
+  if (destacar) destacarUltimo(r);
+}
+function destacarUltimo(r) {
+  const el = document.getElementById('tcUltimo');
+  const ini = (r.nome || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  el.innerHTML = `
+    <div class="tc-check">✅</div>
+    <div>
+      <div class="tc-nome">${r.nome}</div>
+      <div class="tc-meta">Matrícula ${r.matricula} · Turma ${r.turma || '—'}</div>
+    </div>
+    <div class="tc-hora">${r.hora ? r.hora.slice(0,5) : ''}</div>`;
+  el.classList.remove('oculto');
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'pulsarEntrada 0.5s ease';
+}
+function renderizarListaConfirmacao() {
+  const cont = document.getElementById('tcLista');
+  if (!tcRegistros.length) {
+    cont.innerHTML = '<div class="tc-vazio">Nenhuma presença registrada ainda hoje.<br>Assim que um aluno passar pelo scanner, o nome aparece aqui.</div>';
+    return;
+  }
+  cont.innerHTML = tcRegistros.map(r => {
+    const ini = (r.nome || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+    return `<div class="tc-item">
+      <div class="log-avatar">${ini}</div>
+      <div><div class="tc-nome-item">${r.nome}</div><div class="tc-meta-item">Turma ${r.turma || '—'}</div></div>
+      <div class="tc-hora-item">${r.hora ? r.hora.slice(0,5) : ''}</div>
+    </div>`;
+  }).join('');
+}
+function atualizarRelogioConfirmacao() {
+  const el = document.getElementById('tcRelogio');
+  if (el) el.textContent = new Date().toLocaleTimeString('pt-BR');
+}
+setInterval(atualizarRelogioConfirmacao, 1000);
+
+function alternarTelaCheia() {
+  document.body.classList.toggle('tc-fullscreen');
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el);
+  } else if (document.exitFullscreen) {
+    document.exitFullscreen();
+  }
+}
+
+// Atualização instantânea local: quando ESTE dispositivo faz um scan
+// com sucesso, mostra na hora na tela de Confirmação, sem esperar o
+// próximo ciclo de busca no servidor (útil quando scanner e telão
+// estão no mesmo aparelho/tela).
+function tcNotificarRegistroLocal(registro) {
+  tcRegistroNovo({
+    matricula: registro.matricula, nome: registro.nome, turma: registro.turma, hora: registro.hora,
+  }, document.getElementById('painel-confirmacao').classList.contains('ativa'));
+}
+
+
+renderizarLog();
+atualizarStats();
+document.getElementById('avisoCarregar').style.display = 'block';
+carregarDashboard();
+// Busca o nome real da escola (aba ⚙️ Config). Se falhar por qualquer
+// motivo, simplesmente mantém o nome padrão já escrito no HTML — nunca
+// quebra o carregamento do painel por causa disso.
+async function carregarNomeEscola() {
+  try {
+    const data = await jsonpRequest(getUrl(), { action: 'obterConfigEscola' }, 10000);
+    if (data.status === 'ok' && data.nomeEscola) {
+      document.getElementById('nomeEscolaTopo').textContent = data.nomeEscola;
+    }
+  } catch (err) { /* mantém o nome padrão do HTML — falha aqui não afeta o resto do painel */ }
+}
+
+(function iniciarAuto() { testarConexao(); carregarAlunosPainel(); carregarNomeEscola(); })();
+</script>
+</body>
+</html>
